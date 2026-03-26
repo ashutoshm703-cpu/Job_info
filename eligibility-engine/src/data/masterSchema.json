@@ -1,0 +1,99 @@
+{
+  "id": "template",
+  "exam_pattern": {
+    "stage_type": "single",
+    "prelims": {
+      "question_type": "",
+      "total_questions": null,
+      "duration_mins": null,
+      "language": "",
+      "mode": "",
+      "marks_per_correct": null,
+      "negative_marking": "",
+      "qualifying_marks": { "UR": null, "OBC": null, "SC_ST": null, "EWS": null, "PwBD": null }
+    },
+    "mains": {
+      "question_type": "",
+      "total_marks": null,
+      "duration_mins": null,
+      "has_negative_marking": false,
+      "negative_marking": "",
+      "is_merit_stage": true,
+      "qualifying_marks": { "UR": null, "OBC": null, "SC_ST": null, "EWS": null },
+      "notes": ""
+    }
+  },
+  "content_weightage": {
+    "nursing_percent": null,
+    "other_sections": []
+  },
+  "application_fees": {
+    "UR": null,
+    "OBC": null,
+    "SC_ST": null,
+    "EWS": null,
+    "PwBD": null
+  },
+  "metadata": {
+    "exam_name": "",
+    "image_url": "",
+    "total_vacancies": null,
+    "salary_range": "",
+    "important_dates": [],
+    "notification_url": "https://"
+  },
+  "base_age_min": null,
+  "base_age_min_female": null,
+  "base_age_max_male": null,
+  "has_female_specific_age": false,
+  "base_age_max_female": null,
+  "gender_restriction": "Both",
+  "as_on_date": "",
+  "category_benefits_locked_to_state": "",
+  "category_relaxations": {
+    "OBC": null,
+    "SC": null,
+    "ST": null,
+    "EWS": null
+  },
+  "pwbd_relaxations": {
+    "UR": null,
+    "OBC": null,
+    "SC": null,
+    "ST": null,
+    "EWS": null
+  },
+  "esm_relaxation": null,
+  "govt_employee_relaxation": null,
+  "contractual_relaxation_per_year": null,
+  "contractual_relaxation_max": null,
+  "hs_science_required": false,
+  "required_high_school_state_location": "",
+  "required_employment_exchange_state": "",
+  "registration_accepted_scope": "Any State",
+  "requires_permanent_registration": true,
+  "prohibit_multiple_living_spouses": true,
+  "degrees": {
+    "B.Sc_Nursing": {
+      "allowed": true,
+      "req_exp_months": null,
+      "req_min_hospital_beds": null
+    },
+    "Post_Basic_BSc": {
+      "allowed": true,
+      "req_exp_months": null,
+      "req_min_hospital_beds": null
+    },
+    "MSc_Nursing": {
+      "allowed": true,
+      "req_exp_months": null,
+      "req_min_hospital_beds": null
+    },
+    "GNM": {
+      "allowed": true,
+      "req_exp_months": null,
+      "req_min_hospital_beds": null
+    }
+  },
+  "requires_recognized_institute": true
+}

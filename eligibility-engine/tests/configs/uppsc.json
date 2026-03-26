@@ -1,0 +1,55 @@
+{
+  "base_age_min": 21,
+  "base_age_max_male": 40,
+  "base_age_max_female": 40,
+  "as_on_date": "2023-07-01",
+  "category_benefits_locked_to_state": "Uttar Pradesh",
+  "category_relaxations": {
+    "OBC": 5,
+    "SC": 5,
+    "ST": 5,
+    "EWS": 0
+  },
+  "hs_science_required": true,
+  "required_high_school_state_location": "",
+  "required_employment_exchange_state": "",
+  "registration_accepted_scope": "Uttar Pradesh",
+  "requires_permanent_registration": false,
+  "prohibit_multiple_living_spouses": true,
+  "degrees": {
+    "B.Sc_Nursing": {
+      "allowed": true,
+      "req_exp_months": 0,
+      "req_min_hospital_beds": 0
+    },
+    "Post_Basic_BSc": {
+      "allowed": true,
+      "req_exp_months": 0,
+      "req_min_hospital_beds": 0
+    },
+    "MSc_Nursing": {
+      "allowed": true,
+      "req_exp_months": 0,
+      "req_min_hospital_beds": 0
+    },
+    "GNM": {
+      "allowed": true,
+      "req_exp_months": 0,
+      "req_min_hospital_beds": 0
+    }
+  },
+  "has_female_specific_age": false,
+  "pwbd_relaxations": {
+    "UR": 10,
+    "OBC": 13,
+    "SC": 15,
+    "ST": 15,
+    "EWS": 10
+  },
+  "esm_relaxation": 5,
+  "govt_employee_relaxation": 5,
+  "contractual_relaxation_per_year": 0,
+  "contractual_relaxation_max": 0,
+  "gender_restriction": "None",
+  "requires_recognized_institute": true
+}

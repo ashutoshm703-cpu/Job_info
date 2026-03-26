@@ -1,0 +1,30 @@
+# Node modules
+node_modules/
+eligibility-engine/node_modules/
+
+# Production build
+dist/
+eligibility-engine/dist/
+
+# Environment variables
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp files
+tmp/
+*.tmp
+*.log
+
+# Workspace/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project specific
+eligibility-engine/.next/
+eligibility-engine/out/

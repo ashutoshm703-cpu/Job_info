@@ -1,0 +1,48 @@
+graph LR
+    %% Styles
+    classDef basis fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef binary fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef decision fill:#bfb,stroke:#333,stroke-width:2px;
+    classDef fail fill:#fbb,stroke:#333,stroke-width:2px;
+
+    Start((Candidate Input)) --> B1[Basis: Evaluation of Domicile Selection]
+    B1 --> D1{Within Lock?}
+    
+    D1 -- Yes --> B2a[Basis: Maintain Reservation Category]
+    D1 -- No --> B2b[Basis: Force-Shift Category to 'UR']
+    
+    B2a --> B3[Basis: Boundary Selection via Gender]
+    B2b --> B3
+    
+    B3 --> D3{Female specific?}
+    
+    D3 -- Yes --> B4a[Basis: Apply Gender-Shift Ceiling]
+    D3 -- No --> B4b[Basis: Apply Male/Generic Ceiling]
+    
+    B4a --> B5[Basis: Verify Age Floor/Min Limit]
+    B4b --> B5
+    
+    B5 --> D5{Age >= Floor?}
+    
+    D5 -- No --> Term1[FINAL DECISION: MATHEMATICAL AGE REJECTION]
+    class Term1 fail;
+    
+    D5 -- Yes --> B6[Basis: Relaxation Aggregate Max Analysis]
+    
+    B6 --> D6{Valid PwBD/ESM/Cat Benefit?}
+    
+    D6 -- No --> B7a[Basis: Use Standard Base Ceiling]
+    D6 -- Yes --> B7b[Basis: Use Effective Max Ceiling]
+    
+    B7a --> B8[Basis: Final Boundary Comparison]
+    B7b --> B8
+    
+    B8 --> D8{Age <= Effective Ceiling?}
+    
+    D8 -- No --> Term2[FINAL DECISION: AGE LIMIT EXCEEDED]
+    D8 -- Yes --> Term3[FINAL DECISION: DEMOGRAPHICALLY ELIGIBLE]
+    
+    class B1,B2a,B2b,B3,B4a,B4b,B5,B6,B7a,B7b,B8 basis;
+    class D1,D3,D5,D6,D8 binary;
+    class Term3 decision;
+    class Term2 fail;

@@ -1,5 +1,10 @@
 {
   "id": "template",
+  "is_state_exam": false,
+  "exam_state": "",
+  "is_national_scope": true,
+  "req_regional_language": false,
+  "target_language": "",
   "exam_pattern": {
     "stage_type": "single",
     "prelims": {
@@ -49,6 +54,11 @@
   "base_age_max_female": null,
   "gender_restriction": "Both",
   "as_on_date": "",
+  "has_marital_restriction": false,
+  "allowed_marital_statuses": [],
+  "has_esm_relaxation": false,
+  "esm_service_years": 0,
+  "esm_grace_period": 3,
   "category_benefits_locked_to_state": "",
   "category_relaxations": {
     "OBC": null,
@@ -68,6 +78,7 @@
   "contractual_relaxation_per_year": null,
   "contractual_relaxation_max": null,
   "hs_science_required": false,
+  "hs_subjects": [],
   "required_high_school_state_location": "",
   "required_employment_exchange_state": "",
   "registration_accepted_scope": "Any State",
@@ -75,24 +86,28 @@
   "prohibit_multiple_living_spouses": true,
   "degrees": {
     "B.Sc_Nursing": {
-      "allowed": true,
+      "allowed": false,
       "req_exp_months": null,
-      "req_min_hospital_beds": null
+      "req_min_hospital_beds": null,
+      "registration_protocol": { "scope": "any", "state": "", "permanent_only": true }
     },
     "Post_Basic_BSc": {
-      "allowed": true,
+      "allowed": false,
       "req_exp_months": null,
-      "req_min_hospital_beds": null
+      "req_min_hospital_beds": null,
+      "registration_protocol": { "scope": "any", "state": "", "permanent_only": true }
     },
     "MSc_Nursing": {
-      "allowed": true,
+      "allowed": false,
       "req_exp_months": null,
-      "req_min_hospital_beds": null
+      "req_min_hospital_beds": null,
+      "registration_protocol": { "scope": "any", "state": "", "permanent_only": true }
     },
     "GNM": {
-      "allowed": true,
+      "allowed": false,
       "req_exp_months": null,
-      "req_min_hospital_beds": null
+      "req_min_hospital_beds": null,
+      "registration_protocol": { "scope": "any", "state": "", "permanent_only": true }
     }
   },
   "requires_recognized_institute": true

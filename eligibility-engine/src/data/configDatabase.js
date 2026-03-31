@@ -90,13 +90,41 @@ export const initialExams = [
   }
 ];
 
-export const getStoredExams = () => {
-  const stored = localStorage.getItem('eligibility-exams');
-  if (stored) {
-    return JSON.parse(stored);
+import templateSchema from './masterSchema.json';
+
+const deepMerge = (target, source) => {
+  const output = { ...target };
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach(key => {
+      if (isObject(source[key])) {
+        if (!(key in target)) Object.assign(output, { [key]: source[key] });
+        else output[key] = deepMerge(target[key], source[key]);
+      } else {
+        Object.assign(output, { [key]: source[key] });
+      }
+    });
   }
-  localStorage.setItem('eligibility-exams', JSON.stringify(initialExams));
-  return initialExams;
+  return output;
+};
+
+const isObject = (item) => (item && typeof item === 'object' && !Array.isArray(item));
+
+export const getStoredExams = () => {
+  const storedData = localStorage.getItem('eligibility-exams');
+  let rawExams = storedData ? JSON.parse(storedData) : initialExams;
+  
+  // Normalize each exam with the master template schema
+  const normalizedExams = rawExams.map(exam => {
+    // Deep merge: Template (defaults) + Exam data (overrides)
+    const merged = deepMerge(JSON.parse(JSON.stringify(templateSchema)), exam);
+    merged.id = exam.id; // Preserve ID
+    return merged;
+  });
+
+  if (!storedData) {
+    localStorage.setItem('eligibility-exams', JSON.stringify(normalizedExams));
+  }
+  return normalizedExams;
 }
 
 export const saveExams = (exams) => {

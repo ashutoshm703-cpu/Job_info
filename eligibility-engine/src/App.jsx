@@ -35,13 +35,15 @@ function App() {
           </nav>
         </header>
 
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Navigate to="/student" replace />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/student" element={<StudentPortal />} />
-          </Routes>
-        </main>
+        <Routes>
+          <Route path="/" element={<Navigate to="/student" replace />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/student" element={
+            <main className="main-content">
+              <StudentPortal />
+            </main>
+          } />
+        </Routes>
       </div>
     </BrowserRouter>
   );

@@ -45,7 +45,8 @@
     "total_vacancies": null,
     "salary_range": "",
     "important_dates": [],
-    "notification_url": "https://"
+    "notification_url": "https://",
+    "notification_status": "detailed"
   },
   "base_age_min": null,
   "base_age_min_female": null,

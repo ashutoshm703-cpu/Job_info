@@ -780,6 +780,7 @@ export default function AdminDashboard() {
                   {activeExam.is_state_exam
                     ? activeExam.exam_state
                     : "National Central"}
+                  {activeExam.metadata?.notification_status === "short" && " • [ UPCOMING ]"}
                 </span>
               </div>
             </div>
@@ -1476,6 +1477,24 @@ export default function AdminDashboard() {
             />
           </div>
 
+          <div style={{ marginBottom: "1rem" }}>
+            <label className="form-label" style={{ fontSize: "0.65rem", fontWeight: 800, color: "var(--text-tertiary)", textTransform: "uppercase" }}>Notification Status</label>
+            <div className="segmented-control" style={{ width: "100%" }}>
+              <button
+                className={`segmented-btn ${activeExam.metadata?.notification_status !== "short" ? "active" : ""}`}
+                onClick={() => updateExamData(prev => ({ ...prev, metadata: { ...prev.metadata, notification_status: "detailed" } }))}
+              >
+                Detailed / Active
+              </button>
+              <button
+                className={`segmented-btn ${activeExam.metadata?.notification_status === "short" ? "active" : ""}`}
+                onClick={() => updateExamData(prev => ({ ...prev, metadata: { ...prev.metadata, notification_status: "short" } }))}
+              >
+                Short / Tentative
+              </button>
+            </div>
+          </div>
+
           <div
             style={{
               display: "grid",
@@ -1800,24 +1819,42 @@ export default function AdminDashboard() {
                     ))}
                   </datalist>
                 </div>
-                <input
-                  type="date"
-                  className="form-input"
-                  style={{ padding: "4px 8px", fontSize: "0.7rem" }}
-                  value={m.date || ""}
-                  onChange={(e) =>
-                    handleImportantDateChange(i, "date", e.target.value)
-                  }
-                />
+                {activeExam.metadata?.notification_status === "short" ? (
+                  <div
+                    style={{
+                      padding: "4px 8px",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      background: "var(--bg-app-subtle)",
+                      border: "1px dashed var(--border-strong)",
+                      borderRadius: "6px",
+                      textAlign: "center",
+                      color: "var(--text-tertiary)"
+                    }}
+                  >
+                    T B A
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    className="form-input"
+                    style={{ padding: "4px 8px", fontSize: "0.7rem" }}
+                    value={m.date || ""}
+                    onChange={(e) =>
+                      handleImportantDateChange(i, "date", e.target.value)
+                    }
+                  />
+                )}
                 <input
                   className="form-input"
                   maxLength={12}
-                  placeholder="Button Text"
-                  style={{ fontSize: "0.7rem", padding: "4px 8px" }}
-                  value={m.cta_text || ""}
+                  placeholder={activeExam.metadata?.notification_status === "short" ? "NOTIFY ME" : "Button Text"}
+                  style={{ fontSize: "0.7rem", padding: "4px 8px", color: activeExam.metadata?.notification_status === "short" ? "var(--accent-primary)" : "inherit" }}
+                  value={activeExam.metadata?.notification_status === "short" ? "NOTIFY ME" : m.cta_text || ""}
                   onChange={(e) =>
                     handleImportantDateChange(i, "cta_text", e.target.value)
                   }
+                  disabled={activeExam.metadata?.notification_status === "short"}
                 />
                 <input
                   className="form-input"
@@ -3162,7 +3199,7 @@ export default function AdminDashboard() {
     return (
       <div className="animate-in">
         {renderSectionHeader(
-          "Marking Scheme",
+          "Exam Pattern",
           "Configure the structural tiers, negative marking, and format.",
           FileText
         )}
@@ -3185,6 +3222,36 @@ export default function AdminDashboard() {
             <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_qs || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_qs: Number(e.target.value) } }))} /></div>
             <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Marks</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_marks || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_marks: Number(e.target.value) } }))} /></div>
             <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_duration || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_duration: Number(e.target.value) } }))} /></div>
+          </div>
+
+          <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border-subtle)" }}>
+            <label className="form-label" style={{ fontSize: "0.7rem" }}>Question Paper Language</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", maxWidth: "600px" }}>
+              <select className="form-select" value={activeExam.exam_pattern?.question_language || "english"} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, question_language: e.target.value, regional_language: e.target.value === "english_state" ? p.exam_pattern?.regional_language || "" : "" } }))}>
+                <option value="english">Only English</option>
+                <option value="english_hindi">English + Hindi</option>
+                <option value="english_state">English + State Language</option>
+              </select>
+              {activeExam.exam_pattern?.question_language === "english_state" && (
+                <select 
+                  className="form-select" 
+                  value={activeExam.exam_pattern?.regional_language || ""} 
+                  onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, regional_language: e.target.value } }))}
+                >
+                  <option value="">Select Language</option>
+                  <option value="Marathi">Marathi</option>
+                  <option value="Tamil">Tamil</option>
+                  <option value="Telugu">Telugu</option>
+                  <option value="Kannada">Kannada</option>
+                  <option value="Malayalam">Malayalam</option>
+                  <option value="Bengali">Bengali</option>
+                  <option value="Gujarati">Gujarati</option>
+                  <option value="Odia">Odia</option>
+                  <option value="Punjabi">Punjabi</option>
+                  <option value="Assamese">Assamese</option>
+                </select>
+              )}
+            </div>
           </div>
         </div>
 
@@ -3232,7 +3299,7 @@ export default function AdminDashboard() {
     return (
       <div className="animate-in">
         {renderSectionHeader(
-          "Syllabus Weightage",
+          "Exam Syllabus",
           "Define the ratio between core nursing science and general aptitude.",
           BookOpen
         )}
@@ -3339,7 +3406,7 @@ export default function AdminDashboard() {
     return (
       <div className="animate-in">
         {renderSectionHeader(
-          "Universal Fee Matrix",
+          "Exam Fees",
           "Set exact financial burdens or waivers per category. Overrides apply chronologically.",
           IndianRupee
         )}
@@ -3474,9 +3541,9 @@ export default function AdminDashboard() {
     { id: "dates", label: "Timeline", icon: Clock },
     { id: "age", label: "Age Limits", icon: Users },
     { id: "edu", label: "Education", icon: GraduationCap },
-    { id: "marking", label: "Marking Scheme", icon: FileText },
-    { id: "syllabus", label: "Syllabus Split", icon: BookOpen },
-    { id: "fees", label: "Universal Fees", icon: IndianRupee },
+    { id: "marking", label: "Exam Pattern", icon: FileText },
+    { id: "syllabus", label: "Exam Syllabus", icon: BookOpen },
+    { id: "fees", label: "Exam Fees", icon: IndianRupee },
   ];
 
   return (

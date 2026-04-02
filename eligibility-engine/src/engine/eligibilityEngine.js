@@ -120,8 +120,19 @@ export default class EvaluationEngine {
     if (this.rules.requires_recognized_institute && !this.profile.is_institute_recognized) {
        this.addFail(`Institute Accreditation Failure: Your Nursing College/Institute holds no official recognition by the Indian Nursing Council (INC) or State Nursing Council. This exam strictly rejects unaccredited degrees.`);
     }
-    if (this.rules.hs_science_required && !this.profile.passed_hs_science) {
-      // Note: Assuming a hard coded block for standard engines if not tracked by the profile
+    // --- 3A. Academic Baseline Gate ---
+    const baseline = this.rules.academic_baseline || (this.rules.hs_science_required ? '12th_science' : '12th');
+    
+    if (baseline === '12th_science') {
+      if (!this.profile.passed_hs_science) {
+        this.addFail(`High School Stream Rejection: This position strictly mandates 10+2 with Science (PCB). Your profile does not meet the foundational science requirement.`);
+      }
+    } else if (baseline === '12th') {
+      // Assuming profile.highest_schooling_level or similar. Fallback to passed_hs_science as proxy if 12th isn't explicitly tracked
+      const is12thPass = this.profile.highest_schooling_level >= 12 || this.profile.passed_hs_science;
+      if (!is12thPass) {
+        this.addFail(`Educational Level Deficiency: This position requires a minimum of 10+2 (Higher Secondary). Matriculation alone is insufficient.`);
+      }
     }
 
     if (this.rules.required_high_school_state_location && this.profile.high_school_state !== this.rules.required_high_school_state_location) {

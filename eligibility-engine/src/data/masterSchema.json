@@ -78,6 +78,7 @@
   "govt_employee_relaxation": null,
   "contractual_relaxation_per_year": null,
   "contractual_relaxation_max": null,
+  "academic_baseline": "12th",
   "hs_science_required": false,
   "hs_subjects": [],
   "required_high_school_state_location": "",

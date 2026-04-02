@@ -1,48 +1,40 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { ShieldCheck, UserCog, GraduationCap } from 'lucide-react';
+import { ShieldCheck, UserCog } from 'lucide-react';
 import AdminDashboard from './pages/Admin';
-import StudentPortal from './pages/Student';
 
 function App() {
   return (
     <BrowserRouter>
       <div className="app-container">
-        <header className="nav-header">
+        <header className="nav-header" style={{ justifyContent: 'center' }}>
           <NavLink to="/" className="nav-brand">
             <ShieldCheck size={28} color="var(--accent-primary)" />
             <span>Eligibility Core</span>
           </NavLink>
+          
           <nav className="nav-links">
             <NavLink 
-              to="/admin" 
+              to="/" 
               className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <UserCog size={18} />
-                Admin Matrix
-              </div>
-            </NavLink>
-            <NavLink 
-              to="/student" 
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <GraduationCap size={18} />
-                Student Portal
+                <span>Admin Matrix</span>
               </div>
             </NavLink>
           </nav>
         </header>
 
         <Routes>
-          <Route path="/" element={<Navigate to="/student" replace />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/student" element={
-            <main className="main-content">
-              <StudentPortal />
-            </main>
-          } />
+          {/* Default entry point is now Admin Matrix */}
+          <Route path="/" element={<AdminDashboard />} />
+          
+          {/* Legacy route redirection or fallback */}
+          <Route path="/admin" element={<Navigate to="/" replace />} />
+          
+          {/* Catch-all fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </BrowserRouter>

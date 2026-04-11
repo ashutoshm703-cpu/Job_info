@@ -649,6 +649,15 @@ body {
   border-color: rgba(15, 23, 42, 0.1);
 }
 
+/* Iron Dome: Stacking & Visibility Overrides */
+.milestone-container {
+  overflow: visible !important;
+}
+
+.milestone-node {
+  overflow: visible !important;
+}
+
 /* Master Typography Extensions */
 .label-premium {
   font-size: 0.6rem;

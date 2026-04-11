@@ -88,6 +88,7 @@ export default function AdminDashboard() {
   const [lastSavedExams, setLastSavedExams] = useState([]);
   const [selectedDegree, setSelectedDegree] = useState(null);
   const [showGlobalPreview, setShowGlobalPreview] = useState(false);
+  const [activeTimelineHud, setActiveTimelineHud] = useState({ index: null, type: null });
 
   // HUD Testing State
   const [hudGender, setHudGender] = useState("Male");
@@ -314,6 +315,9 @@ export default function AdminDashboard() {
               upsell: { url: "", title: "" },
               guide: { url: "", title: "" },
             },
+            has_time_limit: false,
+            start_time: "",
+            end_time: "",
             id: Date.now() + Math.random(),
           },
         ],
@@ -449,14 +453,22 @@ export default function AdminDashboard() {
       boost = Math.max(boost, pwbdBoost);
     }
 
-    const finalMax = baseMax + boost;
+    let finalMax = baseMax + boost;
+    if (hudPwBD && activeExam.pwbd_max_age_ceiling) {
+      finalMax = Math.min(finalMax, activeExam.pwbd_max_age_ceiling);
+    }
 
     // 3. Military Service Deduction (ESM Logic)
     let effectiveAge = age.y;
     if (hudIsEsm && activeExam.has_esm_relaxation) {
       const service = Number(hudEsmService) || 0;
-      const grace = activeExam.esm_grace_period || 3;
+      const grace = activeExam.esm_grace_period || 0;
       effectiveAge = age.y - service - grace;
+
+      // Apply ESM Ceiling: It effectively defines the new finalMax for this group
+      if (activeExam.esm_max_age_ceiling) {
+        finalMax = Math.max(finalMax, activeExam.esm_max_age_ceiling);
+      }
     }
 
     // 4. Min Determination (Inheritance Logic)
@@ -1570,12 +1582,16 @@ export default function AdminDashboard() {
       )}
       <div
         className="milestone-container"
-        style={{ position: "relative", marginTop: "1.25rem" }}
+        style={{ 
+          position: "relative", 
+          marginTop: "1.25rem",
+          paddingBottom: "120px" // Iron Dome: Landing Zone for bottom row popovers
+        }}
       >
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "40px 1fr 60px 150px 140px 140px 40px",
+            gridTemplateColumns: "40px 1.2fr 50px 140px 110px 125px 125px 40px",
             gap: "0.5rem",
             padding: "0 1.25rem",
             marginBottom: "0.75rem",
@@ -1590,6 +1606,7 @@ export default function AdminDashboard() {
           <div>Event Sequence</div>
           <div style={{ textAlign: "center" }}>TBA</div>
           <div>Date</div>
+          <div style={{ textAlign: "center" }}><Clock size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Time</div>
           <div style={{ textAlign: "center" }}>Action / CTA</div>
           <div style={{ textAlign: "center" }}>Prep. Resources</div>
           <div style={{ textAlign: "right" }}>X</div>
@@ -1608,7 +1625,9 @@ export default function AdminDashboard() {
                 listStyle: "none", 
                 marginBottom: "0.4rem",
                 position: "relative",
-                zIndex: m.show_cta_popover || m.show_popover ? 1000 : 1 
+                // Iron Dome: Elevate active row and neutralize transform isolation
+                zIndex: (m.show_cta_popover || m.show_popover || m.show_time_popover) ? 2000 : 1,
+                transform: (m.show_cta_popover || m.show_popover || m.show_time_popover) ? "none" : undefined
               }}
             >
                 <motion.div
@@ -1616,7 +1635,7 @@ export default function AdminDashboard() {
                   className="milestone-node"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "40px 1fr 60px 150px 140px 140px 40px",
+                    gridTemplateColumns: "40px 1.2fr 50px 140px 110px 125px 125px 40px",
                     gap: "0.5rem",
                     alignItems: "center",
                     padding: "0.4rem 0.75rem",
@@ -1624,6 +1643,7 @@ export default function AdminDashboard() {
                     borderRadius: "12px",
                     border: "1px solid var(--border-subtle)",
                     boxShadow: "var(--shadow-sm)",
+                    overflow: "visible" // Iron Dome: Ensure popover 'blooms' out
                   }}
                 >
                   <div className="milestone-card-accent" />
@@ -1707,8 +1727,8 @@ export default function AdminDashboard() {
                       type="date"
                       className="form-input"
                       style={{ 
-                        padding: "6px 10px", 
-                        fontSize: "0.8rem", 
+                        padding: "6px 8px", 
+                        fontSize: "0.75rem", 
                         fontWeight: 700,
                         width: "100%",
                         border: m.is_tentative ? "1px dashed var(--accent-primary)" : "1px solid var(--border-subtle)",
@@ -1721,18 +1741,46 @@ export default function AdminDashboard() {
                       }
                     />
                   </div>
-                  
+
+                  {/* High-Precision Time Column */}
                   <div style={{ position: 'relative', zIndex: 10 }}>
+                    <button
+                      className={`action-pellet ${m.has_time_limit ? 'active' : ''}`}
+                      style={{ 
+                        width: '100%', 
+                        justifyContent: 'center',
+                        background: m.has_time_limit ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-app-subtle)',
+                        border: m.has_time_limit ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)'
+                      }}
+                      onClick={() => {
+                        const isOpening = activeTimelineHud.index !== i || activeTimelineHud.type !== 'time';
+                        setActiveTimelineHud(isOpening ? { index: i, type: 'time' } : { index: null, type: null });
+                        if (isOpening) {
+                          handleImportantDateChange(i, "has_time_limit", true);
+                        }
+                      }}
+                    >
+                      {m.has_time_limit && m.start_time ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', fontWeight: 900, color: 'var(--accent-primary)' }}>
+                          <Clock size={10} />
+                          <span>{m.start_time}</span>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.6 }}>
+                          <Clock size={10} />
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800 }}>+ Set Time</span>
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                  
+                  <div style={{ position: 'relative' }}>
                     <button
                       className={`action-pellet ${m.cta_text && m.action_url ? 'active' : ''}`}
                       style={{ width: '100%', justifyContent: 'center' }}
                       onClick={() => {
-                        const isOpening = !m.show_cta_popover;
-                        handleImportantDateChange(i, "show_cta_popover", isOpening);
-                        if (isOpening) {
-                          handleImportantDateChange(i, "show_popover", false);
-                          setTimelineErrors(prev => ({ ...prev, [`${i}-cta`]: null }));
-                        }
+                        const isOpening = activeTimelineHud.index !== i || activeTimelineHud.type !== 'cta';
+                        setActiveTimelineHud(isOpening ? { index: i, type: 'cta' } : { index: null, type: null });
                       }}
                     >
                       {m.cta_text && m.action_url ? (
@@ -1747,150 +1795,15 @@ export default function AdminDashboard() {
                         </div>
                       )}
                     </button>
-
-                    <AnimatePresence>
-                      {m.show_cta_popover && (
-                        <>
-                          <div 
-                            style={{ 
-                              position: "fixed", 
-                              inset: 0, 
-                              zIndex: 80, 
-                              cursor: "default",
-                              background: "transparent" 
-                            }} 
-                            onClick={() => handleImportantDateChange(i, "show_cta_popover", false)}
-                          />
-                          <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            style={{
-                              position: "absolute",
-                              top: "calc(100% + 12px)",
-                              right: 0,
-                              width: "320px",
-                              background: "white",
-                              padding: "1rem",
-                              borderRadius: "16px",
-                              border: "1px solid var(--border-strong)",
-                              boxShadow: "var(--shadow-lg)",
-                              zIndex: 100,
-                              backdropFilter: "blur(8px)",
-                            }}
-                          >
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'space-between',
-                              marginBottom: '1rem' 
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <ExternalLink size={14} color="var(--accent-primary)" />
-                                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>Configure Action</span>
-                              </div>
-                              <button 
-                                onClick={() => handleImportantDateChange(i, "show_cta_popover", false)}
-                                style={{
-                                  background: 'transparent',
-                                  border: 'none',
-                                  padding: '4px',
-                                  color: 'var(--text-tertiary)',
-                                  cursor: 'pointer',
-                                  borderRadius: '50%',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}
-                                className="hover-bg-subtle"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                              <div>
-                                <label className="form-label" style={{ fontSize: '0.6rem' }}>Button Text</label>
-                                <input
-                                  className="form-input"
-                                  placeholder="e.g. Apply Now"
-                                  style={{ fontSize: "0.75rem" }}
-                                  value={m.cta_text || ""}
-                                  onChange={(e) =>
-                                    handleImportantDateChange(i, "cta_text", e.target.value)
-                                  }
-                                />
-                              </div>
-                              <div>
-                                <label className="form-label" style={{ fontSize: '0.6rem' }}>Destination URL</label>
-                                <input
-                                  className="form-input"
-                                  placeholder="https://..."
-                                  type="url"
-                                  style={{ fontSize: "0.75rem" }}
-                                  value={m.action_url || ""}
-                                  onChange={(e) =>
-                                    handleImportantDateChange(i, "action_url", e.target.value)
-                                  }
-                                />
-                              </div>
-                              {timelineErrors[`${i}-cta`] && (
-                                <p style={{ color: 'var(--accent-danger)', fontSize: '0.6rem', marginTop: '0.25rem' }}>
-                                  {timelineErrors[`${i}-cta`]}
-                                </p>
-                              )}
-                              <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                                <button
-                                  className="btn"
-                                  style={{ 
-                                    height: "36px", 
-                                    fontSize: "0.8rem", 
-                                    flex: 1, 
-                                    background: "transparent", 
-                                    border: "1px solid var(--border-strong)",
-                                    color: "var(--text-secondary)"
-                                  }}
-                                  onClick={() => {
-                                    handleImportantDateChange(i, "cta_text", "");
-                                    handleImportantDateChange(i, "action_url", "");
-                                    setTimelineErrors(prev => ({ ...prev, [`${i}-cta`]: null }));
-                                  }}
-                                >
-                                  Clear All
-                                </button>
-                                <button
-                                  className="btn btn-primary"
-                                  style={{ height: "36px", fontSize: "0.8rem", flex: 2 }}
-                                  onClick={() => {
-                                    const isValid = (!!m.cta_text === !!m.action_url);
-                                    if (!isValid) {
-                                      setTimelineErrors(prev => ({ ...prev, [`${i}-cta`]: "Label and URL both required." }));
-                                      return;
-                                    }
-                                    setTimelineErrors(prev => ({ ...prev, [`${i}-cta`]: null }));
-                                    handleImportantDateChange(i, "show_cta_popover", false);
-                                  }}
-                                >
-                                  Done
-                                </button>
-                              </div>
-                            </div>
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
                   </div>
 
-                  <div style={{ position: 'relative', zIndex: 10 }}>
+                  <div style={{ position: 'relative' }}>
                     <button
                       className={`action-pellet ${m.resources?.video?.url ? 'active' : ''}`}
                       style={{ width: '100%', justifyContent: 'center' }}
                       onClick={() => {
-                        const isOpening = !m.show_popover;
-                        handleImportantDateChange(i, "show_popover", isOpening);
-                        if (isOpening) {
-                          handleImportantDateChange(i, "show_cta_popover", false);
-                          setTimelineErrors(prev => ({ ...prev, [`${i}-video`]: null }));
-                        }
+                        const isOpening = activeTimelineHud.index !== i || activeTimelineHud.type !== 'video';
+                        setActiveTimelineHud(isOpening ? { index: i, type: 'video' } : { index: null, type: null });
                       }}
                     >
                       {m.resources?.video?.url && m.resources?.video?.title ? (
@@ -1905,146 +1818,17 @@ export default function AdminDashboard() {
                         </div>
                       )}
                     </button>
-
-                    <AnimatePresence>
-                      {m.show_popover && (
-                        <>
-                          <div 
-                            style={{ 
-                              position: "fixed", 
-                              inset: 0, 
-                              zIndex: 80, 
-                              cursor: "default",
-                              background: "transparent" 
-                            }} 
-                            onClick={() => handleImportantDateChange(i, "show_popover", false)}
-                          />
-                          <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            style={{
-                              position: "absolute",
-                              top: "calc(100% + 12px)",
-                              right: 0,
-                              width: "320px",
-                              background: "white",
-                              padding: "1rem",
-                              borderRadius: "16px",
-                              border: "1px solid var(--border-strong)",
-                              boxShadow: "var(--shadow-lg)",
-                              zIndex: 100,
-                              backdropFilter: "blur(8px)",
-                            }}
-                          >
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'space-between',
-                              marginBottom: '1rem' 
-                            }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Video size={14} color="var(--accent-primary)" />
-                                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>Video Resource</span>
-                              </div>
-                              <button 
-                                onClick={() => handleImportantDateChange(i, "show_popover", false)}
-                                style={{
-                                  background: 'transparent',
-                                  border: 'none',
-                                  padding: '4px',
-                                  color: 'var(--text-tertiary)',
-                                  cursor: 'pointer',
-                                  borderRadius: '50%',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
-                                }}
-                                className="hover-bg-subtle"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                              <div>
-                                <label className="form-label" style={{ fontSize: '0.6rem' }}>Video Title</label>
-                                  <input
-                                    className="form-input"
-                                    placeholder="e.g. Strategy Guide"
-                                    style={{ fontSize: "0.75rem" }}
-                                    value={m.resources?.video?.title || ""}
-                                    onChange={(e) =>
-                                      handleImportantDateChange(i, "resources.video.title", e.target.value)
-                                    }
-                                  />
-                              </div>
-                              <div>
-                                  <label className="form-label" style={{ fontSize: '0.6rem' }}>YouTube URL</label>
-                                  <input
-                                    className="form-input"
-                                    placeholder="https://youtube..."
-                                    type="url"
-                                    style={{ fontSize: "0.75rem" }}
-                                    value={m.resources?.video?.url || ""}
-                                    onChange={(e) =>
-                                      handleImportantDateChange(i, "resources.video.url", e.target.value)
-                                    }
-                                  />
-                              </div>
-                              {timelineErrors[`${i}-video`] && (
-                                <p style={{ color: 'var(--accent-danger)', fontSize: '0.6rem', marginTop: '0.25rem' }}>
-                                  {timelineErrors[`${i}-video`]}
-                                </p>
-                              )}
-                              <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                                <button
-                                  className="btn"
-                                  style={{ 
-                                    height: "36px", 
-                                    fontSize: "0.8rem", 
-                                    flex: 1, 
-                                    background: "transparent", 
-                                    border: "1px solid var(--border-strong)",
-                                    color: "var(--text-secondary)"
-                                  }}
-                                  onClick={() => {
-                                    handleImportantDateChange(i, "resources.video.title", "");
-                                    handleImportantDateChange(i, "resources.video.url", "");
-                                    setTimelineErrors(prev => ({ ...prev, [`${i}-video`]: null }));
-                                  }}
-                                >
-                                  Clear All
-                                </button>
-                                <button
-                                  className="btn btn-primary"
-                                  style={{ height: "36px", fontSize: "0.8rem", flex: 2 }}
-                                  onClick={() => {
-                                    const isValid = (!!m.resources?.video?.title === !!m.resources?.video?.url);
-                                    if (!isValid) {
-                                      setTimelineErrors(prev => ({ ...prev, [`${i}-video`]: "Title and YouTube URL both required." }));
-                                      return;
-                                    }
-                                    setTimelineErrors(prev => ({ ...prev, [`${i}-video`]: null }));
-                                    handleImportantDateChange(i, "show_popover", false);
-                                  }}
-                                >
-                                  Ready
-                                </button>
-                              </div>
-                            </div>
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "flex-end", zIndex: 1 }}>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
                     <button
                       onClick={() => removeImportantDate(i)}
                       style={{
-                        padding: "4px",
+                        padding: "8px",
                         color: "var(--accent-danger)",
                         border: "none",
-                        background: "transparent",
+                        background: "var(--bg-app-subtle)",
+                        borderRadius: "8px",
                         cursor: 'pointer'
                       }}
                     >
@@ -2052,7 +1836,100 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </motion.div>
-            </Reorder.Item>
+
+                {/* --- INLINE HUD EXPANSION --- */}
+                <AnimatePresence>
+                  {activeTimelineHud.index === i && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                      animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
+                      exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                      style={{ 
+                        overflow: 'hidden',
+                        background: 'rgba(255,255,255,0.4)',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border-subtle)',
+                        padding: '12px'
+                      }}
+                    >
+                      {activeTimelineHud.type === 'time' && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Clock size={14} color="var(--accent-primary)" />
+                              <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>Temporal Settings</span>
+                            </div>
+                            <button onClick={() => setActiveTimelineHud({ index: null, type: null })} className="hover-bg-subtle" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '50%' }}>
+                              <X size={14} />
+                            </button>
+                          </div>
+                          
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Event Time</label>
+                            <input 
+                              type="time" 
+                              className="form-input" 
+                              style={{ fontWeight: 800, fontSize: '0.9rem' }}
+                              value={m.start_time || ""} 
+                              onChange={(e) => {
+                                handleImportantDateChange(i, "start_time", e.target.value);
+                                if (!m.has_time_limit) handleImportantDateChange(i, "has_time_limit", true);
+                              }} 
+                            />
+                            <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+                              Set the specific hour/minute for this event.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {activeTimelineHud.type === 'cta' && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <ExternalLink size={14} color="var(--accent-primary)" />
+                              <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>Configuration Action</span>
+                            </div>
+                            <button onClick={() => setActiveTimelineHud({ index: null, type: null })} className="hover-bg-subtle" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '50%' }}>
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.6rem' }}>Button Text</label>
+                            <input className="form-input" placeholder="e.g. Apply Now" value={m.cta_text || ""} onChange={(e) => handleImportantDateChange(i, "cta_text", e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.6rem' }}>URL</label>
+                            <input className="form-input" placeholder="https://..." value={m.action_url || ""} onChange={(e) => handleImportantDateChange(i, "action_url", e.target.value)} />
+                          </div>
+                        </div>
+                      )}
+
+                      {activeTimelineHud.type === 'video' && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Video size={14} color="var(--accent-primary)" />
+                              <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>Video Asset</span>
+                            </div>
+                            <button onClick={() => setActiveTimelineHud({ index: null, type: null })} className="hover-bg-subtle" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '50%' }}>
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.6rem' }}>Title</label>
+                            <input className="form-input" placeholder="e.g. Strategy Guide" value={m.resources?.video?.title || ""} onChange={(e) => handleImportantDateChange(i, "resources.video.title", e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="form-label" style={{ fontSize: '0.6rem' }}>YouTube Link</label>
+                            <input className="form-input" placeholder="https://..." value={m.resources?.video?.url || ""} onChange={(e) => handleImportantDateChange(i, "resources.video.url", e.target.value)} />
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Reorder.Item>
           ))}
         </Reorder.Group>
         <div
@@ -2259,15 +2136,62 @@ export default function AdminDashboard() {
                     {degMeta.label}
                   </h4>
                   {isAuth ? (
-                    <div style={{ marginTop: "0.75rem", display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                      <div className="action-pellet active" style={{ fontSize: "0.58rem", padding: "3px 8px" }}>
-                        <Map size={10} /> {activeExam.degrees[d]?.registration_protocol?.scope === 'specific' ? activeExam.degrees[d]?.registration_protocol?.state : "National"}
-                      </div>
-                      {activeExam.degrees[d]?.requires_experience && (
-                        <div className="action-pellet" style={{ fontSize: "0.58rem", padding: "3px 8px", background: "var(--accent-primary-bg)", color: "var(--accent-primary)", borderColor: "transparent" }}>
-                           {activeExam.degrees[d]?.req_exp_months}m Clin. Exp
+                    <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "12px" }}>
+                      <div style={{ display: 'flex', flexWrap: "wrap", gap: "6px", alignItems: 'center' }}>
+                        {/* Non-interactive Status Tag */}
+                        <div style={{ 
+                          fontSize: "0.55rem", 
+                          padding: "3px 8px",
+                          background: "var(--bg-app-subtle)",
+                          color: "var(--text-secondary)",
+                          borderRadius: "6px",
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase'
+                        }}>
+                          <Map size={9} /> {activeExam.degrees[d]?.registration_protocol?.scope === 'specific' ? activeExam.degrees[d]?.registration_protocol?.state : "National"}
                         </div>
-                      )}
+                        {activeExam.degrees[d]?.requires_experience && (
+                          <div style={{ 
+                            fontSize: "0.55rem", 
+                            padding: "3px 8px", 
+                            background: "var(--accent-success-bg)", 
+                            color: "var(--accent-success)", 
+                            borderRadius: "6px",
+                            fontWeight: 700,
+                            textTransform: 'uppercase' 
+                          }}>
+                             {activeExam.degrees[d]?.req_exp_months}m Clin. Exp
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Primary Action Button */}
+                      <motion.div 
+                        whileHover={{ scale: 1.02, translateY: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          gap: '8px', 
+                          fontSize: '0.7rem', 
+                          fontWeight: 800, 
+                          color: 'white',
+                          background: 'var(--accent-primary)',
+                          padding: '10px 14px',
+                          borderRadius: '12px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginTop: '4px',
+                          boxShadow: 'var(--shadow-glow)',
+                          cursor: 'pointer'
+                        }}>
+                        <Settings size={14} fill="currentColor" />
+                        Set Eligibility Rules
+                      </motion.div>
                     </div>
                   ) : (
                     <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "0.4rem", fontStyle: "italic", lineHeight: 1.4 }}>Enable this qualification to configure rules.</p>
@@ -2842,6 +2766,49 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 ))}
+                
+                {/* Statutory PwBD Ceiling Entry */}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 12px",
+                    marginTop: "8px",
+                    background: "var(--accent-primary-bg)",
+                    borderRadius: "8px",
+                    border: "1px dashed var(--accent-primary-subtle)"
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 900, color: "var(--accent-primary)", textTransform: 'uppercase' }}>Maximum Age Cap (PwBD)</span>
+                    <span style={{ fontSize: "0.5rem", color: "var(--text-tertiary)" }}>Absolute upper limit after all relaxations</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input
+                      type="number"
+                      style={{
+                        width: "35px",
+                        background: "transparent",
+                        border: "none",
+                        borderBottom: "1.5px solid var(--accent-primary)",
+                        textAlign: "right",
+                        fontWeight: 900,
+                        color: "var(--accent-primary)",
+                        fontSize: "0.9rem",
+                      }}
+                      placeholder="56"
+                      value={activeExam.pwbd_max_age_ceiling ?? ""}
+                      onChange={(e) =>
+                        updateExamData((p) => ({
+                          ...p,
+                          pwbd_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value)
+                        }))
+                      }
+                    />
+                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>Yrs</span>
+                  </div>
+                </div>
               </div>
             </div>
             <p
@@ -2959,37 +2926,75 @@ export default function AdminDashboard() {
                       <input
                         type="number"
                         style={{
-                          width: "30px",
+                          width: "42px",
                           background: "transparent",
                           border: "none",
                           fontSize: "1rem",
                           fontWeight: 800,
                           padding: 0,
-                          textAlign: 'right'
+                          textAlign: 'center'
                         }}
-                        value={activeExam.esm_grace_period ?? 3}
+                        placeholder="0"
+                        value={activeExam.esm_grace_period ?? ""}
                         onChange={(e) =>
                           updateExamData((p) => ({
                             ...p,
-                            esm_grace_period: Number(e.target.value),
+                            esm_grace_period: e.target.value === "" ? "" : Number(e.target.value),
                           }))
                         }
                       />
                       <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Yrs</span>
                     </div>
                   </div>
-                  <span
+
+                  {/* ESM Max Age Cap */}
+                  <div
                     style={{
-                      fontSize: "0.55rem",
-                      fontWeight: 800,
-                      color: "var(--accent-primary)",
+                      flex: 1,
                       background: "var(--accent-primary-bg)",
-                      padding: "4px 8px",
-                      borderRadius: "6px",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      border: "1px dashed var(--accent-primary-subtle)",
                     }}
                   >
-                    ENGINE ACTIVE
-                  </span>
+                    <span
+                      className="label-premium"
+                      style={{
+                        fontSize: "0.45rem",
+                        color: "var(--accent-primary)",
+                        fontWeight: 900,
+                        marginBottom: "2px",
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      Maximum Cap
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input
+                        type="number"
+                        style={{
+                          width: "42px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "1rem",
+                          fontWeight: 900,
+                          color: "var(--accent-primary)",
+                          padding: 0,
+                          textAlign: 'center'
+                        }}
+                        placeholder="50"
+                        value={activeExam.esm_max_age_ceiling ?? ""}
+                        onChange={(e) =>
+                          updateExamData((p) => ({
+                            ...p,
+                            esm_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value)
+                          }))
+                        }
+                      />
+                      <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>Yrs</span>
+                    </div>
+                  </div>
+
                 </div>
               ) : (
                 <div

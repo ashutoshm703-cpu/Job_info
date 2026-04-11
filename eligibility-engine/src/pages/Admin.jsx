@@ -40,6 +40,7 @@ import {
   GripVertical,
   ExternalLink,
   LayoutGrid,
+  Layout,
   X,
   Hash,
 } from "lucide-react";
@@ -3467,6 +3468,7 @@ export default function AdminDashboard() {
   );
 
   const renderMarkingScheme = () => {
+    if (!activeExam) return null;
     const stageType = activeExam.exam_pattern?.stage_type || "single";
     const setStageType = (val) => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage_type: val } }));
 
@@ -3493,9 +3495,9 @@ export default function AdminDashboard() {
                 <option value="0.20">1/5 (-0.20)</option>
               </select>
             </div>
-            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_qs || ""} readOnly={activeExam.exam_pattern?.stage1_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage1_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage1_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_qs: Number(e.target.value) } }))} /></div>
-            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Marks</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_marks || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_marks: Number(e.target.value) } }))} /></div>
-            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_duration || ""} readOnly={activeExam.exam_pattern?.stage1_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage1_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage1_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_duration: Number(e.target.value) } }))} /></div>
+            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_qs || ""} readOnly={activeExam.exam_pattern?.stage1_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage1_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage1_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_qs: Number(e.target.value) || 0 } }))} /></div>
+            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Marks</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_marks || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_marks: Number(e.target.value) || 0 } }))} /></div>
+            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_duration || ""} readOnly={activeExam.exam_pattern?.stage1_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage1_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage1_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_duration: Number(e.target.value) || 0 } }))} /></div>
           </div>
 
           {/* New: Stage 1 Sectional Breakdown */}
@@ -3509,7 +3511,7 @@ export default function AdminDashboard() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Layout style={{ color: "var(--accent-primary)" }} size={14} />
+                <LayoutGrid style={{ color: "var(--accent-primary)" }} size={14} />
                 <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>Sectional Breakup (Sequential)</span>
               </div>
               <div
@@ -3670,9 +3672,9 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               )}
-              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_qs || ""} readOnly={activeExam.exam_pattern?.stage2_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage2_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage2_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_qs: Number(e.target.value) } }))} /></div>
-              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Marks</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_marks || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_marks: Number(e.target.value) } }))} /></div>
-              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_duration || ""} readOnly={activeExam.exam_pattern?.stage2_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage2_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage2_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_duration: Number(e.target.value) } }))} /></div>
+              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_qs || ""} readOnly={activeExam.exam_pattern?.stage2_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage2_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage2_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_qs: Number(e.target.value) || 0 } }))} /></div>
+              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Marks</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_marks || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_marks: Number(e.target.value) || 0 } }))} /></div>
+              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_duration || ""} readOnly={activeExam.exam_pattern?.stage2_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage2_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage2_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_duration: Number(e.target.value) || 0 } }))} /></div>
             </div>
 
             {/* New: Stage 2 Sectional Breakdown */}

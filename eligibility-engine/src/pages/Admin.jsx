@@ -41,6 +41,7 @@ import {
   ExternalLink,
   LayoutGrid,
   X,
+  Hash,
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 
@@ -201,6 +202,43 @@ export default function AdminDashboard() {
     updateExamData((prev) => ({
       ...prev,
       metadata: { ...prev.metadata, [name]: val },
+    }));
+  };
+
+  const handleCategoryVacancyChange = (index, field, value) => {
+    updateExamData((prev) => {
+      const vacancies = [...(prev.metadata.category_vacancies || [])];
+      vacancies[index] = {
+        ...vacancies[index],
+        [field]: field === "count" ? (value === "" ? "" : Math.max(0, Number(value))) : value,
+      };
+      return {
+        ...prev,
+        metadata: { ...prev.metadata, category_vacancies: vacancies },
+      };
+    });
+  };
+
+  const addCategoryVacancy = () => {
+    updateExamData((prev) => ({
+      ...prev,
+      metadata: {
+        ...prev.metadata,
+        category_vacancies: [
+          ...(prev.metadata.category_vacancies || []),
+          { category: "", count: "" },
+        ],
+      },
+    }));
+  };
+
+  const removeCategoryVacancy = (index) => {
+    updateExamData((prev) => ({
+      ...prev,
+      metadata: {
+        ...prev.metadata,
+        category_vacancies: prev.metadata.category_vacancies.filter((_, i) => i !== index),
+      },
     }));
   };
 
@@ -968,183 +1006,349 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const renderIdentityHub = () => (
-    <div className="animate-in">
-      {renderSectionHeader(
-        "Recruitment Details",
-        "Enter the official exam name, pay scale, and vacancies exactly as they appear in the notification.",
-        LayoutGrid,
-      )}
+  const renderIdentityHub = () => {
+    const totalCategorySum = (activeExam.metadata?.category_vacancies || [])
+      .reduce((acc, curr) => acc + (Number(curr.count) || 0), 0);
+    const totalAllowed = Number(activeExam.metadata?.total_vacancies) || 0;
+    const isOverLimit = totalCategorySum > totalAllowed;
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <div
-          className="card"
-          style={{
-            padding: "1.5rem",
-            borderRadius: "20px",
-            background: "white",
-            border: "1px solid var(--border-subtle)",
-            boxShadow: "var(--shadow-sm)",
-          }}
-        >
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: "1.5rem", 
-            marginBottom: "1rem" 
-          }}>
-            <div style={{ flex: 1 }}>
-              <label
-                className="form-label"
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 900,
-                  textTransform: "uppercase",
-                  color: "var(--text-tertiary)",
-                  marginBottom: "0.4rem",
-                  letterSpacing: '0.05em'
-                }}
-              >
-                Exam Information
-              </label>
-              <div className="input-with-icon">
-                <Type size={14} className="icon" style={{ color: 'var(--accent-primary)' }} />
-                <input
-                  type="text"
-                  name="exam_name"
-                  className="form-input"
-                  style={{ 
-                    fontSize: "1.1rem", 
-                    fontWeight: 800, 
-                    padding: "10px 12px 10px 36px",
-                    background: 'var(--bg-app-subtle)',
-                    border: '1px solid var(--border-subtle)'
-                  }}
-                  placeholder="Official Job Title (e.g., AIIMS NORCET 8.0)"
-                  value={activeExam.metadata?.exam_name || ""}
-                  onChange={handleMetadataChange}
-                />
-              </div>
-            </div>
+    return (
+      <div className="animate-in">
+        {renderSectionHeader(
+          "Recruitment Details",
+          "Enter the official exam name, pay scale, and vacancies exactly as they appear in the notification.",
+          LayoutGrid,
+        )}
 
-            <div style={{ minWidth: "180px" }}>
-              <label
-                className="form-label"
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 900,
-                  textTransform: "uppercase",
-                  color: "var(--text-tertiary)",
-                  marginBottom: "0.4rem",
-                  letterSpacing: '0.02em',
-                  textAlign: 'center',
-                  display: 'block'
-                }}
-              >
-                Notification Status
-              </label>
-              <div 
-                onClick={() => updateExamData(prev => ({ 
-                  ...prev, 
-                  metadata: { 
-                    ...prev.metadata, 
-                    notification_status: prev.metadata.notification_status === "short" ? "detailed" : "short" 
-                  } 
-                }))}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  background: 'var(--bg-app-subtle)',
-                  padding: '6px 10px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-subtle)',
-                  justifyContent: 'center'
-                }}
-              >
-                <span style={{ 
-                  fontSize: '0.6rem', 
-                  fontWeight: 900, 
-                  color: activeExam.metadata?.notification_status === "short" ? "var(--accent-primary)" : "var(--text-tertiary)",
-                  opacity: activeExam.metadata?.notification_status === "short" ? 1 : 0.4,
-                  letterSpacing: '0.02em'
-                }}>TENTATIVE</span>
-                
-                <div style={{ 
-                  width: '32px', 
-                  height: '18px', 
-                  background: activeExam.metadata?.notification_status === "detailed" ? "var(--accent-primary)" : "var(--border-strong)",
-                  borderRadius: '20px',
-                  position: 'relative',
-                  transition: 'background 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '2px'
-                }}>
-                  <motion.div 
-                    initial={false}
-                    animate={{ x: activeExam.metadata?.notification_status === "detailed" ? 14 : 0 }}
-                    style={{ 
-                      width: '14px', 
-                      height: '14px', 
-                      background: 'white', 
-                      borderRadius: '50%',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                  />
-                </div>
-
-                <span style={{ 
-                  fontSize: '0.6rem', 
-                  fontWeight: 900, 
-                  color: activeExam.metadata?.notification_status === "detailed" ? "var(--accent-primary)" : "var(--text-tertiary)",
-                  opacity: activeExam.metadata?.notification_status === "detailed" ? 1 : 0.4,
-                  letterSpacing: '0.02em'
-                }}>OFFICIAL</span>
-              </div>
-              <p style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 700, textAlign: 'center', marginTop: '4px' }}>
-                Mark as 'Official' if the final PDF is released 
-              </p>
-            </div>
-          </div>
-
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div
+            className="card"
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "1rem",
+              padding: "1.5rem",
+              borderRadius: "20px",
+              background: "white",
+              border: "1px solid var(--border-subtle)",
+              boxShadow: "var(--shadow-sm)",
             }}
           >
-            <div>
-              <label className="form-label" style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '0.4rem', display: 'block' }}>Salary</label>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "1.5rem", 
+              marginBottom: "1rem" 
+            }}>
+              <div style={{ flex: 1 }}>
+                <label
+                  className="form-label"
+                  style={{
+                    fontSize: "0.6rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    color: "var(--text-tertiary)",
+                    marginBottom: "0.4rem",
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  Exam Information
+                </label>
+                <div className="input-with-icon">
+                  <Type size={14} className="icon" style={{ color: 'var(--accent-primary)' }} />
+                  <input
+                    type="text"
+                    name="exam_name"
+                    className="form-input"
+                    style={{ 
+                      fontSize: "1.1rem", 
+                      fontWeight: 800, 
+                      padding: "10px 12px 10px 36px",
+                      background: 'var(--bg-app-subtle)',
+                      border: '1px solid var(--border-subtle)'
+                    }}
+                    placeholder="Official Job Title (e.g., AIIMS NORCET 8.0)"
+                    value={activeExam.metadata?.exam_name || ""}
+                    onChange={handleMetadataChange}
+                  />
+                </div>
+              </div>
+
+              <div style={{ minWidth: "180px" }}>
+                <label
+                  className="form-label"
+                  style={{
+                    fontSize: "0.6rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    color: "var(--text-tertiary)",
+                    marginBottom: "0.4rem",
+                    letterSpacing: '0.02em',
+                    textAlign: 'center',
+                    display: 'block'
+                  }}
+                >
+                  Notification Status
+                </label>
+                <div 
+                  onClick={() => updateExamData(prev => ({ 
+                    ...prev, 
+                    metadata: { 
+                      ...prev.metadata, 
+                      notification_status: prev.metadata.notification_status === "short" ? "detailed" : "short" 
+                    } 
+                  }))}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    background: 'var(--bg-app-subtle)',
+                    padding: '6px 10px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-subtle)',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <span style={{ 
+                    fontSize: '0.6rem', 
+                    fontWeight: 900, 
+                    color: activeExam.metadata?.notification_status === "short" ? "var(--accent-primary)" : "var(--text-tertiary)",
+                    opacity: activeExam.metadata?.notification_status === "short" ? 1 : 0.4,
+                    letterSpacing: '0.02em'
+                  }}>TENTATIVE</span>
+                  
+                  <div style={{ 
+                    width: '32px', 
+                    height: '18px', 
+                    background: activeExam.metadata?.notification_status === "detailed" ? "var(--accent-primary)" : "var(--border-strong)",
+                    borderRadius: '20px',
+                    position: 'relative',
+                    transition: 'background 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px'
+                  }}>
+                    <motion.div 
+                      initial={false}
+                      animate={{ x: activeExam.metadata?.notification_status === "detailed" ? 14 : 0 }}
+                      style={{ 
+                        width: '14px', 
+                        height: '14px', 
+                        background: 'white', 
+                        borderRadius: '50%',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}
+                    />
+                  </div>
+
+                  <span style={{ 
+                    fontSize: '0.6rem', 
+                    fontWeight: 900, 
+                    color: activeExam.metadata?.notification_status === "detailed" ? "var(--accent-primary)" : "var(--text-tertiary)",
+                    opacity: activeExam.metadata?.notification_status === "detailed" ? 1 : 0.4,
+                    letterSpacing: '0.02em'
+                  }}>OFFICIAL</span>
+                </div>
+                <p style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 700, textAlign: 'center', marginTop: '4px' }}>
+                  Mark as 'Official' if the final PDF is released 
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "1rem" }}>
+              <label className="form-label" style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '0.4rem', display: 'block' }}>Salary & Pay Scale</label>
               <div className="input-with-icon">
-                <IndianRupee size={14} className="icon" />
+                <IndianRupee size={14} className="icon" style={{ color: 'var(--accent-primary)' }} />
                 <input
                   type="text"
                   name="salary_range"
                   className="form-input"
-                  style={{ fontWeight: 700 }}
-                  placeholder="e.g.,  12- 13 Lakh per Anuum"
+                  style={{ fontWeight: 700, background: 'var(--bg-app-subtle)' }}
+                  placeholder="e.g., 12-13 Lakh per Annum"
                   value={activeExam.metadata?.salary_range || ""}
                   onChange={handleMetadataChange}
                 />
               </div>
             </div>
-            <div>
-              <label className="form-label" style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '0.4rem', display: 'block' }}>Advertised Vacancies</label>
-              <div className="input-with-icon">
-                <Users size={14} className="icon" />
-                <input
-                  type="number"
-                  name="total_vacancies"
-                  className="form-input"
-                  style={{ fontWeight: 700 }}
-                  placeholder="Total number of posts available"
-                  value={activeExam.metadata?.total_vacancies || ""}
-                  onChange={handleMetadataChange}
-                />
+
+            <div
+              className="premium-glass"
+              style={{
+                marginTop: "1.5rem",
+                padding: "1.25rem",
+                borderRadius: "20px",
+                border: "1px solid var(--border-subtle)",
+                background: "linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(245,247,255,0.4) 100%)",
+                display: "grid",
+                gridTemplateColumns: "280px 1fr",
+                gap: "2rem",
+              }}
+            >
+              {/* Left Column: Master Vacancy Control */}
+              <div style={{ borderRight: '1px dashed var(--border-subtle)', paddingRight: '2rem' }}>
+                <label
+                  className="form-label"
+                  style={{
+                    fontSize: "0.6rem",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    color: "var(--accent-primary)",
+                    marginBottom: "0.6rem",
+                    display: "block",
+                    letterSpacing: '0.05em'
+                  }}
+                >
+                  Vacancy Management Hub
+                </label>
+                <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: '1rem', lineHeight: 1.4 }}>
+                  Establish the total advertised seats as the root baseline for distribution.
+                </p>
+
+                <div className="input-with-icon" style={{ marginBottom: '1.25rem' }}>
+                  <Users size={14} className="icon" style={{ color: 'var(--accent-primary)' }} />
+                  <input
+                    type="number"
+                    name="total_vacancies"
+                    className="form-input"
+                    style={{ fontWeight: 800, fontSize: '1.2rem', padding: '12px 12px 12px 38px' }}
+                    placeholder="Total Seats"
+                    value={activeExam.metadata?.total_vacancies || ""}
+                    onChange={handleMetadataChange}
+                  />
+                </div>
+
+                <div 
+                  style={{ 
+                    padding: '12px', 
+                    borderRadius: '16px', 
+                    background: isOverLimit ? 'var(--accent-danger-bg)' : 'white',
+                    border: `1px solid ${isOverLimit ? 'var(--accent-danger)' : 'var(--border-subtle)'}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--text-tertiary)' }}>ALLOCATED</span>
+                    {isOverLimit ? <ShieldAlert size={12} color="var(--accent-danger)" /> : <Binary size={12} color="var(--accent-primary)" />}
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 900, color: isOverLimit ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
+                    {totalCategorySum} <span style={{ color: 'var(--text-tertiary)', fontWeight: 500, fontSize: '0.8rem' }}>/ {totalAllowed || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Categorical Breakdown */}
+              <div style={{ minHeight: '160px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-secondary)' }}>CATEGORICAL DISTRIBUTION</span>
+                  <p style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                    Divide seats into specific reservation groups.
+                  </p>
+                </div>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                  {(activeExam.metadata?.category_vacancies || []).map((cv, idx) => (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      key={idx} 
+                      style={{ 
+                        display: "grid", 
+                        gridTemplateColumns: "1fr 140px 36px", 
+                        gap: "0.6rem", 
+                        alignItems: "center",
+                        background: 'rgba(255,255,255,0.5)',
+                        padding: '4px',
+                        borderRadius: '10px'
+                      }}
+                    >
+                      <div className="input-with-icon">
+                        <Type size={12} className="icon" />
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Category (e.g., UR, OBC...)"
+                          style={{ fontSize: "0.8rem", fontWeight: 700, border: 'none', background: 'transparent' }}
+                          value={cv.category}
+                          onChange={(e) => handleCategoryVacancyChange(idx, "category", e.target.value)}
+                        />
+                      </div>
+                      <div className="input-with-icon">
+                        <Hash size={12} className="icon" />
+                        <input
+                          type="number"
+                          className="form-input"
+                          placeholder="Count"
+                          style={{ fontSize: "0.8rem", fontWeight: 700, textAlign: 'center', border: 'none', background: 'transparent' }}
+                          value={cv.count}
+                          onChange={(e) => handleCategoryVacancyChange(idx, "count", e.target.value)}
+                        />
+                      </div>
+                      <button
+                        onClick={() => removeCategoryVacancy(idx)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--text-tertiary)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        className="hover-danger"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </motion.div>
+                  ))}
+
+                  <button
+                    className="btn"
+                    style={{
+                      marginTop: '0.5rem',
+                      padding: '10px 14px',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      background: 'white',
+                      color: 'var(--accent-primary)',
+                      border: '1px solid var(--border-subtle)',
+                      boxShadow: 'var(--shadow-sm)',
+                      width: 'fit-content',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      borderRadius: '12px'
+                    }}
+                    onClick={addCategoryVacancy}
+                  >
+                    <Plus size={14} />
+                    Add Category
+                  </button>
+                </div>
+
+                {isOverLimit && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ 
+                      marginTop: '1rem', 
+                      padding: '10px', 
+                      background: 'var(--accent-danger-bg)', 
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      color: 'var(--accent-danger)',
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      border: '1px solid var(--accent-danger-subtle)'
+                    }}
+                  >
+                    <AlertTriangle size={14} />
+                    <span>Sum of categories ({totalCategorySum}) exceeds Advertised Vacancies ({totalAllowed}).</span>
+                  </motion.div>
+                )}
               </div>
             </div>
           </div>
@@ -1240,7 +1444,7 @@ export default function AdminDashboard() {
                     name="image_url"
                     value={
                       activeExam.metadata?.image_url &&
-                      !activeExam.metadata.image_url.startsWith("data:")
+                      !activeExam.metadata?.image_url?.startsWith("data:")
                         ? activeExam.metadata.image_url
                         : ""
                     }
@@ -1331,7 +1535,7 @@ export default function AdminDashboard() {
                     className="form-input"
                     value={
                       activeExam.metadata?.notification_url &&
-                      !activeExam.metadata.notification_url.startsWith("data:")
+                      !activeExam.metadata?.notification_url?.startsWith("data:")
                         ? activeExam.metadata.notification_url
                         : ""
                     }
@@ -1354,8 +1558,8 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderImportantDates = () => (
     <div className="animate-in">
@@ -1961,61 +2165,46 @@ export default function AdminDashboard() {
         </select>
       </div>
 
-      {/* Degree Block */}
-      <h3 style={{ fontSize: "1rem", fontWeight: 800, marginBottom: "1rem" }}>Permissible Qualifications</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "0.75rem" }}>
-        {UNIVERSAL_DEGREES.map((degMeta) => {
-          const d = degMeta.id;
-          const isAuth = activeExam.degrees?.[d]?.allowed;
-          return (
-            <div
-              key={d}
-              onClick={(e) => { 
-                if (isAuth) {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  if (selectedDegree?.id === d) {
-                    setSelectedDegree(null);
-                  } else {
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem" }}>
+          {UNIVERSAL_DEGREES.map((degMeta, idx) => {
+            const d = degMeta.id;
+            const isAuth = !!activeExam.degrees?.[d]?.allowed;
+            return (
+              <motion.div
+                layout
+                key={d}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.05 }}
+                whileHover={{ scale: 1.02, translateY: -5 }}
+                onClick={(e) => { 
+                  if (isAuth) {
+                    const rect = e.currentTarget.getBoundingClientRect();
                     setSelectedDegree({ id: d, rect }); 
+                  } else {
+                    handleDegreeChange(d, "allowed", true);
                   }
-                }
-              }}
-              style={{
-                padding: "1.25rem", 
-                borderRadius: "20px", 
-                cursor: "pointer",
-                border: isAuth ? "2px solid var(--accent-primary)" : "1.2px solid var(--border-subtle)",
-                background: "white", 
-                display: "flex", 
-                flexDirection: "column",
-                boxShadow: isAuth ? "var(--shadow-md)" : "var(--shadow-sm)", 
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                position: "relative",
-                overflow: "hidden"
-              }}
-              className="degree-card-hover"
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1.25rem" }}>
-                <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={!!isAuth} 
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => { 
-                      e.stopPropagation(); 
-                      handleDegreeChange(d, "allowed", e.target.checked); 
-                    }} 
-                    style={{ 
-                      width: "24px", 
-                      height: "24px", 
-                      cursor: "pointer",
-                      accentColor: "var(--accent-primary)"
-                    }}
-                  />
+                }}
+                className="premium-glass"
+                style={{
+                  padding: "1.15rem 1.4rem", 
+                  cursor: "pointer",
+                  borderRadius: "20px",
+                  border: "none",
+                  background: isAuth ? "white" : "rgba(255, 255, 255, 0.3)", 
+                  boxShadow: isAuth ? "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)" : "var(--shadow-sm)",
+                  display: "flex", 
+                  flexDirection: "column",
+                  gap: "0.85rem",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  minHeight: "140px"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ 
                     width: "40px", 
                     height: "40px", 
-                    borderRadius: "10px", 
+                    borderRadius: "12px", 
                     background: isAuth ? "var(--accent-primary-bg)" : "var(--bg-app-subtle)", 
                     display: "flex", 
                     alignItems: "center", 
@@ -2025,37 +2214,69 @@ export default function AdminDashboard() {
                   }}>
                     <GraduationCap size={20} />
                   </div>
+                  
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                      <span style={{ fontSize: "0.5rem", fontWeight: 900, color: isAuth ? "var(--accent-primary)" : "var(--text-tertiary)", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                        {isAuth ? "Authorized" : "Disabled"}
+                      </span>
+                    </div>
+                    {/* Integrated Toggle Visual */}
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDegreeChange(d, "allowed", !isAuth);
+                      }}
+                      style={{ 
+                        width: "34px", 
+                        height: "19px", 
+                        borderRadius: "20px", 
+                        background: isAuth ? "var(--accent-primary)" : "var(--text-tertiary)", 
+                        position: "relative",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        opacity: isAuth ? 1 : 0.4,
+                        cursor: "pointer"
+                      }}
+                    >
+                      <motion.div 
+                        animate={{ x: isAuth ? 16 : 2 }}
+                        style={{ 
+                          width: "15px", 
+                          height: "15px", 
+                          borderRadius: "50%", 
+                          background: "white", 
+                          position: "absolute", 
+                          top: "2px",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
+                        }} 
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "0.6rem", fontWeight: 900, color: isAuth ? "var(--accent-primary)" : "var(--text-tertiary)", letterSpacing: "0.5px" }}>
-                    {isAuth ? "ACTIVE" : "INACTIVE"}
-                  </span>
+
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ fontSize: "0.92rem", fontWeight: 800, lineHeight: 1.3, color: isAuth ? "var(--text-primary)" : "var(--text-tertiary)" }}>
+                    {degMeta.label}
+                  </h4>
+                  {isAuth ? (
+                    <div style={{ marginTop: "0.75rem", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      <div className="action-pellet active" style={{ fontSize: "0.58rem", padding: "3px 8px" }}>
+                        <Map size={10} /> {activeExam.degrees[d]?.registration_protocol?.scope === 'specific' ? activeExam.degrees[d]?.registration_protocol?.state : "National"}
+                      </div>
+                      {activeExam.degrees[d]?.requires_experience && (
+                        <div className="action-pellet" style={{ fontSize: "0.58rem", padding: "3px 8px", background: "var(--accent-primary-bg)", color: "var(--accent-primary)", borderColor: "transparent" }}>
+                           {activeExam.degrees[d]?.req_exp_months}m Clin. Exp
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "0.4rem", fontStyle: "italic", lineHeight: 1.4 }}>Enable this qualification to configure rules.</p>
+                  )}
                 </div>
-              </div>
-              <h4 style={{ fontSize: "0.9rem", fontWeight: 800, lineHeight: 1.4, color: isAuth ? "var(--text-primary)" : "var(--text-secondary)" }}>
-                {degMeta.label}
-              </h4>
-              
-              {isAuth ? (
-                <div style={{ marginTop: "1.25rem", fontSize: "0.7rem", color: "var(--text-tertiary)", display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                   <span style={{ background: "var(--bg-app)", padding: "4px 10px", borderRadius: "6px", fontWeight: 700 }}>
-                     {activeExam.degrees[d]?.registration_protocol?.scope === 'specific' ? activeExam.degrees[d]?.registration_protocol?.state : "National Portability"}
-                   </span>
-                   {activeExam.degrees[d]?.requires_experience && (
-                     <span style={{ background: "rgba(79, 70, 229, 0.08)", color: "var(--accent-primary)", padding: "4px 10px", borderRadius: "6px", fontWeight: 800 }}>
-                       {activeExam.degrees[d]?.req_exp_months}m Exp Required
-                     </span>
-                   )}
-                </div>
-              ) : (
-                <div style={{ marginTop: "1rem", fontSize: "0.65rem", color: "var(--text-tertiary)", fontStyle: "italic" }}>
-                  Tap to enable and configure rules.
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+              </motion.div>
+            );
+          })}
+        </div>
 
       <AnimatePresence>{selectedDegree && renderEducationRuleDrawer()}</AnimatePresence>
     </div>
@@ -3320,12 +3541,12 @@ export default function AdminDashboard() {
           "Define the ratio between core nursing science and general aptitude.",
           BookOpen
         )}
-        <div className="card" style={{ background: "white", padding: "1.5rem", borderRadius: "24px", border: "1px solid var(--border-subtle)" }}>
-          <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: 800, marginBottom: "1rem", display: "block" }}>MASTER SPLIT</label>
+        <div className="premium-glass" style={{ padding: "1.5rem", borderRadius: "24px", border: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+          <label className="label-premium" style={{ fontSize: "0.75rem", fontWeight: 800, marginBottom: "1rem", display: "block" }}>MASTER SPLIT</label>
           
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
-            <div style={{ background: "var(--bg-app-subtle)", padding: "1.25rem", borderRadius: "16px", border: "1px solid var(--border-subtle)" }}>
-              <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--text-primary)" }}>Nursing Syllabus (%)</label>
+            <div style={{ background: "rgba(0,0,0,0.02)", padding: "1.25rem", borderRadius: "20px", border: "none" }}>
+              <label className="label-premium" style={{ fontSize: "0.75rem", margin: 0, color: "var(--text-primary)" }}>Nursing Syllabus (%)</label>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
                 <input 
                   type="number" 
@@ -3345,8 +3566,8 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div style={{ background: "var(--bg-app-subtle)", padding: "1.25rem", borderRadius: "16px", border: "1px solid var(--border-subtle)" }}>
-              <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--text-primary)" }}>Non-Nursing Aptitude (%)</label>
+            <div style={{ background: "rgba(0,0,0,0.02)", padding: "1.25rem", borderRadius: "20px", border: "none" }}>
+              <label className="label-premium" style={{ fontSize: "0.75rem", margin: 0, color: "var(--text-primary)" }}>Non-Nursing Aptitude (%)</label>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
                 <input 
                   type="number" 
@@ -3368,7 +3589,7 @@ export default function AdminDashboard() {
           </div>
 
           {nonCorePercent > 0 && (
-            <div style={{ background: "var(--bg-app)", padding: "1.5rem", borderRadius: "16px", border: "1px dashed var(--border-strong)" }}>
+            <div className="premium-glass" style={{ padding: "1.5rem", borderRadius: "20px", border: "1px solid rgba(0,0,0,0.03)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
                 <div>
                   <h5 style={{ fontSize: "0.85rem", fontWeight: 800 }}>Non-Nursing Subject Breakdown</h5>
@@ -3381,7 +3602,7 @@ export default function AdminDashboard() {
               
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {(activeExam.syllabus?.non_core_subjects || []).map((sub, idx) => (
-                  <div key={idx} style={{ display: "flex", gap: "1rem", alignItems: "center", background: "white", padding: "10px 16px", borderRadius: "12px", border: "1px solid var(--border-subtle)" }}>
+                  <div key={idx} style={{ display: "flex", gap: "1rem", alignItems: "center", background: "white", padding: "12px 20px", borderRadius: "16px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
                     <input type="text" className="form-input" style={{ flex: 1, background: "transparent", border: "none", boxShadow: "none", padding: "0", fontWeight: 700 }} placeholder="Subject Name e.g. General Knowledge" value={sub.name} onChange={e => {
                       const newSubs = [...activeExam.syllabus.non_core_subjects];
                       newSubs[idx].name = e.target.value;
@@ -3436,24 +3657,41 @@ export default function AdminDashboard() {
           </div>
         </label>
 
-        <div className="card" style={{ background: "white", borderRadius: "24px", border: "1px solid var(--border-subtle)", overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "12px 20px", background: "var(--bg-app-subtle)", borderBottom: "1px solid var(--border-subtle)", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+        <div className="premium-glass" style={{ borderRadius: "24px", border: "none", overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "16px 20px", background: "rgba(0,0,0,0.02)", borderBottom: "1px solid rgba(0,0,0,0.05)", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", color: "var(--text-tertiary)" }}>
             <div>Applicant Category</div>
             <div>Fee Amount (₹)</div>
             <div>Total Exemption</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {categories.map((c, i) => (
-              <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "16px 20px", borderBottom: i === categories.length - 1 ? "none" : "1px solid var(--border-subtle)", alignItems: "center" }}>
+              <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "20px", borderBottom: i === categories.length - 1 ? "none" : "1px solid rgba(0,0,0,0.04)", alignItems: "center" }}>
                 <div style={{ fontWeight: 800, fontSize: "0.85rem" }}>{c.label}</div>
                 <div>
                   <input type="number" className="form-input" style={{ width: "100px", fontSize: "1rem", fontWeight: 800, background: getWaived(c.id) ? "var(--bg-app)" : "white" }} placeholder="0" disabled={getWaived(c.id)} value={getFee(c.id)} onChange={(e) => setFee(c.id, e.target.value)} />
                 </div>
                 <div>
-                  <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-                    <input type="checkbox" checked={getWaived(c.id)} onChange={(e) => setWaived(c.id, e.target.checked)} style={{ width: "18px", height: "18px" }}/>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: getWaived(c.id) ? "var(--text-primary)" : "var(--text-tertiary)" }}>Waived</span>
-                  </label>
+                  <div 
+                    onClick={() => setWaived(c.id, !getWaived(c.id))}
+                    style={{ 
+                      display: "flex", alignItems: "center", gap: "10px", cursor: "pointer",
+                      opacity: getWaived(c.id) ? 1 : 0.6
+                    }}
+                  >
+                    <div style={{ 
+                      width: "32px", height: "18px", borderRadius: "12px", 
+                      background: getWaived(c.id) ? "var(--accent-primary)" : "var(--text-tertiary)", 
+                      position: "relative", transition: "all 0.3s"
+                    }}>
+                      <div style={{ 
+                        width: "14px", height: "14px", borderRadius: "50%", background: "white", 
+                        position: "absolute", top: "2px", 
+                        left: getWaived(c.id) ? "16px" : "2px", transition: "all 0.3s",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
+                      }}/>
+                    </div>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: getWaived(c.id) ? "var(--accent-primary)" : "var(--text-tertiary)" }}>Waived</span>
+                  </div>
                 </div>
               </div>
             ))}

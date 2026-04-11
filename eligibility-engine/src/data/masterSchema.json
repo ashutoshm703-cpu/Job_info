@@ -43,6 +43,7 @@
     "exam_name": "",
     "image_url": "",
     "total_vacancies": null,
+    "category_vacancies": [],
     "salary_range": "",
     "important_dates": [],
     "notification_url": "https://",

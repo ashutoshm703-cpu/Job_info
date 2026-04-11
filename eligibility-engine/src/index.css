@@ -97,11 +97,15 @@
   padding: 0;
 }
 
+html, body {
+  height: 100vh;
+  overflow: hidden;
+}
+
 body {
   font-family: var(--font-premium);
   background: var(--bg-arctic-slate);
   position: relative;
-  overflow-x: hidden;
   color: var(--text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;

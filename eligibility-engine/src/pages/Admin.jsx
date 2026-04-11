@@ -3826,7 +3826,7 @@ export default function AdminDashboard() {
   };
 
   const renderSyllabusSplit = () => {
-    const corePercent = activeExam.syllabus?.core_percentage || 50;
+    const corePercent = activeExam.syllabus?.core_percentage ?? 80;
     const nonCorePercent = activeExam.syllabus?.non_core_percentage ?? (100 - corePercent);
     
     return (
@@ -3846,15 +3846,20 @@ export default function AdminDashboard() {
                 <input 
                   type="number" 
                   className="form-input" 
-                  value={corePercent} 
-                  onChange={e => updateExamData(p => ({ 
-                    ...p, 
-                    syllabus: { 
-                      ...p.syllabus, 
-                      core_percentage: Number(e.target.value),
-                      non_core_percentage: 100 - Number(e.target.value)
-                    } 
-                  }))} 
+                  min="0"
+                  max="100"
+                  value={activeExam.syllabus?.core_percentage ?? ""} 
+                  onChange={e => {
+                    const val = e.target.value === "" ? 0 : Math.max(0, Math.min(100, Number(e.target.value)));
+                    updateExamData(p => ({ 
+                      ...p, 
+                      syllabus: { 
+                        ...p.syllabus, 
+                        core_percentage: val,
+                        non_core_percentage: 100 - val
+                      } 
+                    }));
+                  }}
                   placeholder="e.g. 50"
                   style={{ fontSize: "1.1rem", fontWeight: 800, padding: "0.75rem" }}
                 />
@@ -3867,15 +3872,20 @@ export default function AdminDashboard() {
                 <input 
                   type="number" 
                   className="form-input" 
-                  value={nonCorePercent} 
-                  onChange={e => updateExamData(p => ({ 
-                    ...p, 
-                    syllabus: { 
-                      ...p.syllabus, 
-                      non_core_percentage: Number(e.target.value),
-                      core_percentage: 100 - Number(e.target.value)
-                    } 
-                  }))} 
+                  min="0"
+                  max="100"
+                  value={activeExam.syllabus?.non_core_percentage ?? ""} 
+                  onChange={e => {
+                    const val = e.target.value === "" ? 0 : Math.max(0, Math.min(100, Number(e.target.value)));
+                    updateExamData(p => ({ 
+                      ...p, 
+                      syllabus: { 
+                        ...p.syllabus, 
+                        non_core_percentage: val,
+                        core_percentage: 100 - val
+                      } 
+                    }));
+                  }}
                   placeholder="e.g. 50"
                   style={{ fontSize: "1.1rem", fontWeight: 800, padding: "0.75rem" }}
                 />

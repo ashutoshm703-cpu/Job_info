@@ -4311,10 +4311,6 @@ export default function AdminDashboard() {
         {activeSection === "fees" && renderFeeStructure()}
         {showGlobalPreview && renderLiveStudentCardHUD()}
         {renderEducationRuleDrawer()}
-
-        {activeSection === "fees" && renderFeeStructure()}
-        {showGlobalPreview && renderLiveStudentCardHUD()}
-        {renderEducationRuleDrawer()}
       </div>
     </div>
   );

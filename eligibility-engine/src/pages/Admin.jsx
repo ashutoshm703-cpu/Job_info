@@ -3688,7 +3688,7 @@ export default function AdminDashboard() {
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Layout style={{ color: "var(--accent-primary)" }} size={14} />
+                  <LayoutGrid style={{ color: "var(--accent-primary)" }} size={14} />
                   <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>Stage 2 Sectional Breakup</span>
                 </div>
                 <div
@@ -3795,6 +3795,29 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+            </div>
+
+            <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(79, 70, 229, 0.1)" }}>
+              <label className="form-label" style={{ fontSize: "0.7rem", color: "var(--accent-primary)" }}>Stage 2 Question Paper Language</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", maxWidth: "600px" }}>
+                <select className="form-select" value={activeExam.exam_pattern?.stage2_question_language || "english"} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_question_language: e.target.value, stage2_regional_language: e.target.value === "english_state" ? p.exam_pattern?.stage2_regional_language || "" : "" } }))}>
+                  <option value="english">Only English</option>
+                  <option value="english_hindi">English + Hindi</option>
+                  <option value="english_state">English + State Language</option>
+                </select>
+                {activeExam.exam_pattern?.stage2_question_language === "english_state" && (
+                  <select 
+                    className="form-select" 
+                    value={activeExam.exam_pattern?.stage2_regional_language || ""} 
+                    onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_regional_language: e.target.value } }))}
+                  >
+                    <option value="">Select Language</option>
+                    {NURSING_LANGUAGES.map(lang => (
+                      <option key={lang} value={lang}>{lang}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -4065,19 +4065,15 @@ export default function AdminDashboard() {
                    />
                 </div>
 
-                {/* 2. CATEGORY LABEL (EDITABLE IF CUSTOM) */}
+                {/* 2. CATEGORY LABEL (ALWAYS EDITABLE) */}
                 <div>
-                  {c.is_custom ? (
-                    <input 
-                      className="form-input" 
-                      style={{ fontSize: "0.85rem", fontWeight: 800, padding: "4px 8px" }}
-                      value={c.label}
-                      onChange={(e) => handleUpdateFeeCategory(c.id, "label", e.target.value)}
-                      placeholder="Category Title"
-                    />
-                  ) : (
-                    <div style={{ fontWeight: 800, fontSize: "0.85rem" }}>{c.label}</div>
-                  )}
+                  <input 
+                    className="form-input" 
+                    style={{ fontSize: "0.85rem", fontWeight: 800, padding: "4px 8px" }}
+                    value={c.label}
+                    onChange={(e) => handleUpdateFeeCategory(c.id, "label", e.target.value)}
+                    placeholder="Category Title"
+                  />
                 </div>
 
                 {/* 3. FEE AMOUNT */}

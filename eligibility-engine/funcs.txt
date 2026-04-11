@@ -1,0 +1,28 @@
+Admin.jsx:
+const renderLiveStudentCardHUD
+const renderSectionHeader
+const renderIdentityHub
+const renderImportantDates
+const renderEducation
+const renderEducationRuleDrawer
+const renderAgeLimits
+const renderJobTypeSection
+const renderMarkingScheme
+const renderSyllabusSplit
+const renderFeeStructure
+
+Admin_backup.jsx:
+const renderLiveStudentCardHUD
+const renderSectionHeader
+const renderIdentityHub
+const renderImportantDates
+const renderEducationModern
+const renderEducation
+const renderEducationRuleDrawer
+const renderAgeLimits
+const renderPremiumInput
+const renderJobTypeSection
+const renderMarkingScheme
+const renderSyllabusSplit
+const renderFeeStructureModern
+const renderFeeStructure

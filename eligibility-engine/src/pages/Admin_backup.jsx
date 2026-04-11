@@ -41,30 +41,36 @@ import {
   ExternalLink,
   LayoutGrid,
   X,
-  Hash,
+  Grid,
+  Layers,
 } from "lucide-react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 
 const NURSING_DATE_TEMPLATES = [
   {
     label: "Online Application Start Date",
-    cta_text: "Secure your spot – Start Application",
+    cta_text: "Click here to Apply Online",
     icon: Calendar,
   },
   {
     label: "Registration Last Date",
-    cta_text: "Don't miss out – Apply Now",
+    cta_text: "Apply Now",
     icon: Flag,
   },
   {
     label: "Admit Card Release Date",
-    cta_text: "Ready for Battle? Get Admit Card",
+    cta_text: "Download Admit Card (PDF)",
     icon: FileText,
   },
   {
     label: "Exam Date (Written/CBT)",
-    cta_text: "The Big Day – Good luck!",
+    cta_text: "Check Examination Details",
     icon: CheckCircle2,
+  },
+  {
+    label: "Result",
+    cta_text: "Check Result",
+    icon: BarChart3,
   },
 ];
 
@@ -88,7 +94,8 @@ export default function AdminDashboard() {
   const [lastSavedExams, setLastSavedExams] = useState([]);
   const [selectedDegree, setSelectedDegree] = useState(null);
   const [showGlobalPreview, setShowGlobalPreview] = useState(false);
-  const [activeTimelineHud, setActiveTimelineHud] = useState({ index: null, type: null });
+  const [popoverAnchor, setPopoverAnchor] = useState(null);
+  const [draftSubject, setDraftSubject] = useState("");
 
   // HUD Testing State
   const [hudGender, setHudGender] = useState("Male");
@@ -142,10 +149,55 @@ export default function AdminDashboard() {
     }));
   };
 
+  const captureAnchor = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPopoverAnchor({
+      top: rect.top,
+      left: rect.left,
+      width: rect.width,
+      height: rect.height,
+      windowScrollY: window.scrollY
+    });
+  };
+
   useEffect(() => {
     const stored = getStoredExams();
-    setExams(stored);
-    setLastSavedExams(JSON.parse(JSON.stringify(stored)));
+    
+    // Migration logic for legacy action button text to ensure self-explanatory standards
+    const migrated = stored.map(exam => {
+      if (!exam.metadata?.important_dates) return exam;
+      
+      const updatedDates = exam.metadata.important_dates.map(date => {
+        let newCta = date.cta_text;
+        
+        // Legacy string mappings
+        const legacyMappings = {
+          "Secure your spot – Start Application": "Click here to Apply Online",
+          "Ready for Battle? Get Admit Card": "Download Admit Card (PDF)",
+          "Get Admit Card": "Download Admit Card (PDF)",
+          "Check Results": "Check Result",
+          "Apply Now": "Click here to Apply Online", // Optional: strictly follow the new standard
+          "Register Now": "Click here to Apply Online"
+        };
+        
+        if (legacyMappings[newCta]) {
+          newCta = legacyMappings[newCta];
+        }
+        
+        return { ...date, cta_text: newCta };
+      });
+
+      return {
+        ...exam,
+        metadata: {
+          ...exam.metadata,
+          important_dates: updatedDates
+        }
+      };
+    });
+
+    setExams(migrated);
+    setLastSavedExams(JSON.parse(JSON.stringify(migrated)));
   }, []);
 
   const isDirty = JSON.stringify(exams) !== JSON.stringify(lastSavedExams);
@@ -203,43 +255,6 @@ export default function AdminDashboard() {
     updateExamData((prev) => ({
       ...prev,
       metadata: { ...prev.metadata, [name]: val },
-    }));
-  };
-
-  const handleCategoryVacancyChange = (index, field, value) => {
-    updateExamData((prev) => {
-      const vacancies = [...(prev.metadata.category_vacancies || [])];
-      vacancies[index] = {
-        ...vacancies[index],
-        [field]: field === "count" ? (value === "" ? "" : Math.max(0, Number(value))) : value,
-      };
-      return {
-        ...prev,
-        metadata: { ...prev.metadata, category_vacancies: vacancies },
-      };
-    });
-  };
-
-  const addCategoryVacancy = () => {
-    updateExamData((prev) => ({
-      ...prev,
-      metadata: {
-        ...prev.metadata,
-        category_vacancies: [
-          ...(prev.metadata.category_vacancies || []),
-          { category: "", count: "" },
-        ],
-      },
-    }));
-  };
-
-  const removeCategoryVacancy = (index) => {
-    updateExamData((prev) => ({
-      ...prev,
-      metadata: {
-        ...prev.metadata,
-        category_vacancies: prev.metadata.category_vacancies.filter((_, i) => i !== index),
-      },
     }));
   };
 
@@ -315,9 +330,6 @@ export default function AdminDashboard() {
               upsell: { url: "", title: "" },
               guide: { url: "", title: "" },
             },
-            has_time_limit: false,
-            start_time: "",
-            end_time: "",
             id: Date.now() + Math.random(),
           },
         ],
@@ -365,10 +377,42 @@ export default function AdminDashboard() {
 
   const handleCategoryRelaxation = (category, value) => {
     const val = value === "" ? "" : Math.max(0, Number(value));
-    updateExamData((prev) => ({
-      ...prev,
-      category_relaxations: { ...prev.category_relaxations, [category]: val },
-    }));
+    updateExamData((prev) => {
+      const updatedCatRel = { ...prev.category_relaxations, [category]: val };
+      const updatedPwbd = { ...(prev.pwbd_relaxations || {}) };
+
+      // Auto-calculate PwBD specific category if a base UR PwBD exists
+      if (updatedPwbd.UR) {
+        if (category === "OBC") updatedPwbd.OBC = updatedPwbd.UR + val;
+        if (category === "SC") updatedPwbd.SC = updatedPwbd.UR + val;
+        if (category === "ST") updatedPwbd.ST = updatedPwbd.UR + val;
+      }
+      return {
+        ...prev,
+        category_relaxations: updatedCatRel,
+        pwbd_relaxations: updatedPwbd,
+      };
+    });
+  };
+
+  const handlePwBDRelaxation = (pCat, value) => {
+    const val = value === "" ? "" : Math.max(0, Number(value));
+    updateExamData((prev) => {
+      const updatedPwbd = { ...(prev.pwbd_relaxations || {}), [pCat]: val };
+      
+      // Auto-calculate others if UR is changed
+      if (pCat === "UR" && typeof val === "number") {
+         const cats = prev.category_relaxations || {};
+         updatedPwbd.OBC = val + (Number(cats.OBC) || 0);
+         updatedPwbd.SC = val + (Number(cats.SC) || 0);
+         updatedPwbd.ST = val + (Number(cats.ST) || 0);
+      }
+
+      return {
+        ...prev,
+        pwbd_relaxations: updatedPwbd,
+      };
+    });
   };
 
   const handleDegreeChange = (degree, field, value) => {
@@ -377,21 +421,50 @@ export default function AdminDashboard() {
       setSelectedDegree(null);
     }
 
-    updateExamData((prev) => ({
-      ...prev,
-      degrees: {
-        ...prev.degrees,
-        [degree]: {
-          ...prev.degrees[degree],
-          [field]: value,
-          registration_protocol: prev.degrees[degree]?.registration_protocol || {
-            scope: "any",
-            state: "",
-            permanent_only: true,
-          },
+    updateExamData((prev) => {
+      const currentDegree = prev.degrees?.[degree] || {};
+      let updatedDegree = {
+        ...currentDegree,
+        [field]: value,
+      };
+
+      // --- SMART DEFAULTS (Triggered on Activation) ---
+      if (field === "allowed" && value === true) {
+        // GNM Standard: 2 Years Experience + 50 Beds
+        if (degree === "gnm") {
+          updatedDegree = {
+            ...updatedDegree,
+            requires_experience: true,
+            req_exp_months: 24,
+            req_min_hospital_beds: 50,
+            registration_protocol: currentDegree.registration_protocol || {
+              scope: "any",
+              state: "",
+              permanent_only: true,
+            }
+          };
+        } else {
+          // Others: Standard Fresh Entry
+          updatedDegree = {
+            ...updatedDegree,
+            requires_experience: false,
+            registration_protocol: currentDegree.registration_protocol || {
+              scope: "any",
+              state: "",
+              permanent_only: true,
+            }
+          };
+        }
+      }
+
+      return {
+        ...prev,
+        degrees: {
+          ...prev.degrees,
+          [degree]: updatedDegree,
         },
-      },
-    }));
+      };
+    });
   };
 
   const handleRegistrationProtocolChange = (degree, field, value) => {
@@ -453,22 +526,14 @@ export default function AdminDashboard() {
       boost = Math.max(boost, pwbdBoost);
     }
 
-    let finalMax = baseMax + boost;
-    if (hudPwBD && activeExam.pwbd_max_age_ceiling) {
-      finalMax = Math.min(finalMax, activeExam.pwbd_max_age_ceiling);
-    }
+    const finalMax = baseMax + boost;
 
     // 3. Military Service Deduction (ESM Logic)
     let effectiveAge = age.y;
     if (hudIsEsm && activeExam.has_esm_relaxation) {
       const service = Number(hudEsmService) || 0;
-      const grace = activeExam.esm_grace_period || 0;
+      const grace = activeExam.esm_grace_period || 3;
       effectiveAge = age.y - service - grace;
-
-      // Apply ESM Ceiling: It effectively defines the new finalMax for this group
-      if (activeExam.esm_max_age_ceiling) {
-        finalMax = Math.max(finalMax, activeExam.esm_max_age_ceiling);
-      }
     }
 
     // 4. Min Determination (Inheritance Logic)
@@ -1018,349 +1083,183 @@ export default function AdminDashboard() {
     </div>
   );
 
-  const renderIdentityHub = () => {
-    const totalCategorySum = (activeExam.metadata?.category_vacancies || [])
-      .reduce((acc, curr) => acc + (Number(curr.count) || 0), 0);
-    const totalAllowed = Number(activeExam.metadata?.total_vacancies) || 0;
-    const isOverLimit = totalCategorySum > totalAllowed;
+  const renderIdentityHub = () => (
+    <div className="animate-in">
+      {renderSectionHeader(
+        "Recruitment Details",
+        "Enter the official exam name, pay scale, and vacancies exactly as they appear in the notification.",
+        LayoutGrid,
+      )}
 
-    return (
-      <div className="animate-in">
-        {renderSectionHeader(
-          "Recruitment Details",
-          "Enter the official exam name, pay scale, and vacancies exactly as they appear in the notification.",
-          LayoutGrid,
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div
-            className="card"
-            style={{
-              padding: "1.5rem",
-              borderRadius: "20px",
-              background: "white",
-              border: "1px solid var(--border-subtle)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "1.5rem", 
-              marginBottom: "1rem" 
-            }}>
-              <div style={{ flex: 1 }}>
-                <label
-                  className="form-label"
-                  style={{
-                    fontSize: "0.6rem",
-                    fontWeight: 900,
-                    textTransform: "uppercase",
-                    color: "var(--text-tertiary)",
-                    marginBottom: "0.4rem",
-                    letterSpacing: '0.05em'
-                  }}
-                >
-                  Exam Information
-                </label>
-                <div className="input-with-icon">
-                  <Type size={14} className="icon" style={{ color: 'var(--accent-primary)' }} />
-                  <input
-                    type="text"
-                    name="exam_name"
-                    className="form-input"
-                    style={{ 
-                      fontSize: "1.1rem", 
-                      fontWeight: 800, 
-                      padding: "10px 12px 10px 36px",
-                      background: 'var(--bg-app-subtle)',
-                      border: '1px solid var(--border-subtle)'
-                    }}
-                    placeholder="Official Job Title (e.g., AIIMS NORCET 8.0)"
-                    value={activeExam.metadata?.exam_name || ""}
-                    onChange={handleMetadataChange}
-                  />
-                </div>
-              </div>
-
-              <div style={{ minWidth: "180px" }}>
-                <label
-                  className="form-label"
-                  style={{
-                    fontSize: "0.6rem",
-                    fontWeight: 900,
-                    textTransform: "uppercase",
-                    color: "var(--text-tertiary)",
-                    marginBottom: "0.4rem",
-                    letterSpacing: '0.02em',
-                    textAlign: 'center',
-                    display: 'block'
-                  }}
-                >
-                  Notification Status
-                </label>
-                <div 
-                  onClick={() => updateExamData(prev => ({ 
-                    ...prev, 
-                    metadata: { 
-                      ...prev.metadata, 
-                      notification_status: prev.metadata.notification_status === "short" ? "detailed" : "short" 
-                    } 
-                  }))}
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    background: 'var(--bg-app-subtle)',
-                    padding: '6px 10px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--border-subtle)',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <span style={{ 
-                    fontSize: '0.6rem', 
-                    fontWeight: 900, 
-                    color: activeExam.metadata?.notification_status === "short" ? "var(--accent-primary)" : "var(--text-tertiary)",
-                    opacity: activeExam.metadata?.notification_status === "short" ? 1 : 0.4,
-                    letterSpacing: '0.02em'
-                  }}>TENTATIVE</span>
-                  
-                  <div style={{ 
-                    width: '32px', 
-                    height: '18px', 
-                    background: activeExam.metadata?.notification_status === "detailed" ? "var(--accent-primary)" : "var(--border-strong)",
-                    borderRadius: '20px',
-                    position: 'relative',
-                    transition: 'background 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '2px'
-                  }}>
-                    <motion.div 
-                      initial={false}
-                      animate={{ x: activeExam.metadata?.notification_status === "detailed" ? 14 : 0 }}
-                      style={{ 
-                        width: '14px', 
-                        height: '14px', 
-                        background: 'white', 
-                        borderRadius: '50%',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                      }}
-                    />
-                  </div>
-
-                  <span style={{ 
-                    fontSize: '0.6rem', 
-                    fontWeight: 900, 
-                    color: activeExam.metadata?.notification_status === "detailed" ? "var(--accent-primary)" : "var(--text-tertiary)",
-                    opacity: activeExam.metadata?.notification_status === "detailed" ? 1 : 0.4,
-                    letterSpacing: '0.02em'
-                  }}>OFFICIAL</span>
-                </div>
-                <p style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 700, textAlign: 'center', marginTop: '4px' }}>
-                  Mark as 'Official' if the final PDF is released 
-                </p>
-              </div>
-            </div>
-
-            <div style={{ marginTop: "1rem" }}>
-              <label className="form-label" style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '0.4rem', display: 'block' }}>Salary & Pay Scale</label>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <div
+          className="card"
+          style={{
+            padding: "1.5rem",
+            borderRadius: "20px",
+            background: "white",
+            border: "1px solid var(--border-subtle)",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: "1.5rem", 
+            marginBottom: "1rem" 
+          }}>
+            <div style={{ flex: 1 }}>
+              <label
+                className="form-label"
+                style={{
+                  fontSize: "0.6rem",
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  color: "var(--text-tertiary)",
+                  marginBottom: "0.4rem",
+                  letterSpacing: '0.05em'
+                }}
+              >
+                Exam Information
+              </label>
               <div className="input-with-icon">
-                <IndianRupee size={14} className="icon" style={{ color: 'var(--accent-primary)' }} />
+                <Type size={14} className="icon" style={{ color: 'var(--accent-primary)' }} />
                 <input
                   type="text"
-                  name="salary_range"
+                  name="exam_name"
                   className="form-input"
-                  style={{ fontWeight: 700, background: 'var(--bg-app-subtle)' }}
-                  placeholder="e.g., 12-13 Lakh per Annum"
-                  value={activeExam.metadata?.salary_range || ""}
+                  style={{ 
+                    fontSize: "1.1rem", 
+                    fontWeight: 800, 
+                    padding: "10px 12px 10px 36px",
+                    background: 'var(--bg-app-subtle)',
+                    border: '1px solid var(--border-subtle)'
+                  }}
+                  placeholder="Official Job Title (e.g., AIIMS NORCET 8.0)"
+                  value={activeExam.metadata?.exam_name || ""}
                   onChange={handleMetadataChange}
                 />
               </div>
             </div>
 
-            <div
-              className="premium-glass"
-              style={{
-                marginTop: "1.5rem",
-                padding: "1.25rem",
-                borderRadius: "20px",
-                border: "1px solid var(--border-subtle)",
-                background: "linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(245,247,255,0.4) 100%)",
-                display: "grid",
-                gridTemplateColumns: "280px 1fr",
-                gap: "2rem",
-              }}
-            >
-              {/* Left Column: Master Vacancy Control */}
-              <div style={{ borderRight: '1px dashed var(--border-subtle)', paddingRight: '2rem' }}>
-                <label
-                  className="form-label"
-                  style={{
-                    fontSize: "0.6rem",
-                    fontWeight: 900,
-                    textTransform: "uppercase",
-                    color: "var(--accent-primary)",
-                    marginBottom: "0.6rem",
-                    display: "block",
-                    letterSpacing: '0.05em'
-                  }}
-                >
-                  Vacancy Management Hub
-                </label>
-                <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', fontWeight: 600, marginBottom: '1rem', lineHeight: 1.4 }}>
-                  Establish the total advertised seats as the root baseline for distribution.
-                </p>
-
-                <div className="input-with-icon" style={{ marginBottom: '1.25rem' }}>
-                  <Users size={14} className="icon" style={{ color: 'var(--accent-primary)' }} />
-                  <input
-                    type="number"
-                    name="total_vacancies"
-                    className="form-input"
-                    style={{ fontWeight: 800, fontSize: '1.2rem', padding: '12px 12px 12px 38px' }}
-                    placeholder="Total Seats"
-                    value={activeExam.metadata?.total_vacancies || ""}
-                    onChange={handleMetadataChange}
+            <div style={{ minWidth: "180px" }}>
+              <label
+                className="form-label"
+                style={{
+                  fontSize: "0.6rem",
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                  color: "var(--text-tertiary)",
+                  marginBottom: "0.4rem",
+                  letterSpacing: '0.02em',
+                  textAlign: 'center',
+                  display: 'block'
+                }}
+              >
+                Notification Status
+              </label>
+              <div 
+                onClick={() => updateExamData(prev => ({ 
+                  ...prev, 
+                  metadata: { 
+                    ...prev.metadata, 
+                    notification_status: prev.metadata.notification_status === "short" ? "detailed" : "short" 
+                  } 
+                }))}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  background: 'var(--bg-app-subtle)',
+                  padding: '6px 10px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-subtle)',
+                  justifyContent: 'center'
+                }}
+              >
+                <span style={{ 
+                  fontSize: '0.6rem', 
+                  fontWeight: 900, 
+                  color: activeExam.metadata?.notification_status === "short" ? "var(--accent-primary)" : "var(--text-tertiary)",
+                  opacity: activeExam.metadata?.notification_status === "short" ? 1 : 0.4,
+                  letterSpacing: '0.02em'
+                }}>TENTATIVE</span>
+                
+                <div style={{ 
+                  width: '32px', 
+                  height: '18px', 
+                  background: activeExam.metadata?.notification_status === "detailed" ? "var(--accent-primary)" : "var(--border-strong)",
+                  borderRadius: '20px',
+                  position: 'relative',
+                  transition: 'background 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '2px'
+                }}>
+                  <motion.div 
+                    initial={false}
+                    animate={{ x: activeExam.metadata?.notification_status === "detailed" ? 14 : 0 }}
+                    style={{ 
+                      width: '14px', 
+                      height: '14px', 
+                      background: 'white', 
+                      borderRadius: '50%',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}
                   />
                 </div>
 
-                <div 
-                  style={{ 
-                    padding: '12px', 
-                    borderRadius: '16px', 
-                    background: isOverLimit ? 'var(--accent-danger-bg)' : 'white',
-                    border: `1px solid ${isOverLimit ? 'var(--accent-danger)' : 'var(--border-subtle)'}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--text-tertiary)' }}>ALLOCATED</span>
-                    {isOverLimit ? <ShieldAlert size={12} color="var(--accent-danger)" /> : <Binary size={12} color="var(--accent-primary)" />}
-                  </div>
-                  <div style={{ fontSize: '1rem', fontWeight: 900, color: isOverLimit ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
-                    {totalCategorySum} <span style={{ color: 'var(--text-tertiary)', fontWeight: 500, fontSize: '0.8rem' }}>/ {totalAllowed || 0}</span>
-                  </div>
-                </div>
+                <span style={{ 
+                  fontSize: '0.6rem', 
+                  fontWeight: 900, 
+                  color: activeExam.metadata?.notification_status === "detailed" ? "var(--accent-primary)" : "var(--text-tertiary)",
+                  opacity: activeExam.metadata?.notification_status === "detailed" ? 1 : 0.4,
+                  letterSpacing: '0.02em'
+                }}>OFFICIAL</span>
               </div>
+              <p style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 700, textAlign: 'center', marginTop: '4px' }}>
+                Mark as 'Official' if the final PDF is released 
+              </p>
+            </div>
+          </div>
 
-              {/* Right Column: Categorical Breakdown */}
-              <div style={{ minHeight: '160px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-secondary)' }}>CATEGORICAL DISTRIBUTION</span>
-                  <p style={{ fontSize: '0.55rem', color: 'var(--text-tertiary)', fontWeight: 600 }}>
-                    Divide seats into specific reservation groups.
-                  </p>
-                </div>
-                
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                  {(activeExam.metadata?.category_vacancies || []).map((cv, idx) => (
-                    <motion.div 
-                      layout
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      key={idx} 
-                      style={{ 
-                        display: "grid", 
-                        gridTemplateColumns: "1fr 140px 36px", 
-                        gap: "0.6rem", 
-                        alignItems: "center",
-                        background: 'rgba(255,255,255,0.5)',
-                        padding: '4px',
-                        borderRadius: '10px'
-                      }}
-                    >
-                      <div className="input-with-icon">
-                        <Type size={12} className="icon" />
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder="Category (e.g., UR, OBC...)"
-                          style={{ fontSize: "0.8rem", fontWeight: 700, border: 'none', background: 'transparent' }}
-                          value={cv.category}
-                          onChange={(e) => handleCategoryVacancyChange(idx, "category", e.target.value)}
-                        />
-                      </div>
-                      <div className="input-with-icon">
-                        <Hash size={12} className="icon" />
-                        <input
-                          type="number"
-                          className="form-input"
-                          placeholder="Count"
-                          style={{ fontSize: "0.8rem", fontWeight: 700, textAlign: 'center', border: 'none', background: 'transparent' }}
-                          value={cv.count}
-                          onChange={(e) => handleCategoryVacancyChange(idx, "count", e.target.value)}
-                        />
-                      </div>
-                      <button
-                        onClick={() => removeCategoryVacancy(idx)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--text-tertiary)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        className="hover-danger"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </motion.div>
-                  ))}
-
-                  <button
-                    className="btn"
-                    style={{
-                      marginTop: '0.5rem',
-                      padding: '10px 14px',
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      background: 'white',
-                      color: 'var(--accent-primary)',
-                      border: '1px solid var(--border-subtle)',
-                      boxShadow: 'var(--shadow-sm)',
-                      width: 'fit-content',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      borderRadius: '12px'
-                    }}
-                    onClick={addCategoryVacancy}
-                  >
-                    <Plus size={14} />
-                    Add Category
-                  </button>
-                </div>
-
-                {isOverLimit && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{ 
-                      marginTop: '1rem', 
-                      padding: '10px', 
-                      background: 'var(--accent-danger-bg)', 
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      color: 'var(--accent-danger)',
-                      fontSize: '0.65rem',
-                      fontWeight: 700,
-                      border: '1px solid var(--accent-danger-subtle)'
-                    }}
-                  >
-                    <AlertTriangle size={14} />
-                    <span>Sum of categories ({totalCategorySum}) exceeds Advertised Vacancies ({totalAllowed}).</span>
-                  </motion.div>
-                )}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "1rem",
+            }}
+          >
+            <div>
+              <label className="form-label" style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '0.4rem', display: 'block' }}>Salary</label>
+              <div className="input-with-icon">
+                <IndianRupee size={14} className="icon" />
+                <input
+                  type="text"
+                  name="salary_range"
+                  className="form-input"
+                  style={{ fontWeight: 700 }}
+                  placeholder="e.g.,  12- 13 Lakh per Anuum"
+                  value={activeExam.metadata?.salary_range || ""}
+                  onChange={handleMetadataChange}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="form-label" style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--text-tertiary)', marginBottom: '0.4rem', display: 'block' }}>Advertised Vacancies</label>
+              <div className="input-with-icon">
+                <Users size={14} className="icon" />
+                <input
+                  type="number"
+                  name="total_vacancies"
+                  className="form-input"
+                  style={{ fontWeight: 700 }}
+                  placeholder="Total number of posts available"
+                  value={activeExam.metadata?.total_vacancies || ""}
+                  onChange={handleMetadataChange}
+                />
               </div>
             </div>
           </div>
@@ -1456,7 +1355,7 @@ export default function AdminDashboard() {
                     name="image_url"
                     value={
                       activeExam.metadata?.image_url &&
-                      !activeExam.metadata?.image_url?.startsWith("data:")
+                      !activeExam.metadata.image_url.startsWith("data:")
                         ? activeExam.metadata.image_url
                         : ""
                     }
@@ -1547,7 +1446,7 @@ export default function AdminDashboard() {
                     className="form-input"
                     value={
                       activeExam.metadata?.notification_url &&
-                      !activeExam.metadata?.notification_url?.startsWith("data:")
+                      !activeExam.metadata.notification_url.startsWith("data:")
                         ? activeExam.metadata.notification_url
                         : ""
                     }
@@ -1570,28 +1469,24 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderImportantDates = () => (
     <div className="animate-in">
       {renderSectionHeader(
-        "Timeline & Schedule",
-        "Establish the chronological recruitment events.",
+        "Important Dates & Timeline",
+        "Define the official dates and actions for each recruitment event.",
         Clock,
       )}
       <div
         className="milestone-container"
-        style={{ 
-          position: "relative", 
-          marginTop: "1.25rem",
-          paddingBottom: "120px" // Iron Dome: Landing Zone for bottom row popovers
-        }}
+        style={{ position: "relative", marginTop: "1.25rem" }}
       >
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "40px 1.2fr 50px 140px 110px 125px 125px 40px",
+            gridTemplateColumns: "40px 1fr 100px 150px 140px 140px 40px",
             gap: "0.5rem",
             padding: "0 1.25rem",
             marginBottom: "0.75rem",
@@ -1603,13 +1498,12 @@ export default function AdminDashboard() {
           }}
         >
           <div style={{ textAlign: "center" }}>Sort</div>
-          <div>Event Sequence</div>
-          <div style={{ textAlign: "center" }}>TBA</div>
+          <div>Event Name</div>
+          <div style={{ textAlign: "center" }}>Pending or TBD</div>
           <div>Date</div>
-          <div style={{ textAlign: "center" }}><Clock size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />Time</div>
-          <div style={{ textAlign: "center" }}>Action / CTA</div>
+          <div style={{ textAlign: "center" }}>Action Button</div>
           <div style={{ textAlign: "center" }}>Prep. Resources</div>
-          <div style={{ textAlign: "right" }}>X</div>
+          <div style={{ textAlign: "right" }}>Remove</div>
         </div>
         <Reorder.Group
           axis="y"
@@ -1625,9 +1519,7 @@ export default function AdminDashboard() {
                 listStyle: "none", 
                 marginBottom: "0.4rem",
                 position: "relative",
-                // Iron Dome: Elevate active row and neutralize transform isolation
-                zIndex: (m.show_cta_popover || m.show_popover || m.show_time_popover) ? 2000 : 1,
-                transform: (m.show_cta_popover || m.show_popover || m.show_time_popover) ? "none" : undefined
+                zIndex: m.show_cta_popover || m.show_popover ? 1000 : 1 
               }}
             >
                 <motion.div
@@ -1635,7 +1527,7 @@ export default function AdminDashboard() {
                   className="milestone-node"
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "40px 1.2fr 50px 140px 110px 125px 125px 40px",
+                    gridTemplateColumns: "40px 1fr 100px 150px 140px 140px 40px",
                     gap: "0.5rem",
                     alignItems: "center",
                     padding: "0.4rem 0.75rem",
@@ -1643,7 +1535,6 @@ export default function AdminDashboard() {
                     borderRadius: "12px",
                     border: "1px solid var(--border-subtle)",
                     boxShadow: "var(--shadow-sm)",
-                    overflow: "visible" // Iron Dome: Ensure popover 'blooms' out
                   }}
                 >
                   <div className="milestone-card-accent" />
@@ -1723,89 +1614,38 @@ export default function AdminDashboard() {
 
                   {/* Dedicated Date Column */}
                   <div style={{ zIndex: 1 }}>
-                    {m.is_tentative ? (
-                       <div style={{ 
-                        padding: "6px 8px", 
-                        fontSize: "0.62rem", 
-                        fontWeight: 900,
-                        textAlign: "center",
-                        background: "var(--bg-app-subtle)",
-                        color: "var(--accent-primary)",
-                        borderRadius: "8px",
-                        border: "1px dashed var(--accent-primary)",
-                        width: "100%",
-                        height: "30.5px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.02em"
-                      }}>
-                        TBA (To Be Announced)
-                      </div>
-                    ) : (
-                      <input
-                        type="date"
-                        className="form-input"
-                        style={{ 
-                          padding: "6px 8px", 
-                          fontSize: "0.75rem", 
-                          fontWeight: 700,
-                          width: "100%",
-                          border: "1px solid var(--border-subtle)",
-                          background: "white",
-                        }}
-                        value={m.date || ""}
-                        onChange={(e) =>
-                          handleImportantDateChange(i, "date", e.target.value)
-                        }
-                      />
-                    )}
-                  </div>
-
-                  {/* High-Precision Time Column */}
-                  <div style={{ position: 'relative', zIndex: 10 }}>
-                    <button
-                      className={`action-pellet ${m.has_time_limit ? 'active' : ''}`}
-                      disabled={m.is_tentative}
+                    <input
+                      type="date"
+                      className="form-input"
                       style={{ 
-                        width: '100%', 
-                        justifyContent: 'center',
-                        background: m.is_tentative ? 'var(--bg-app-subtle)' : (m.has_time_limit ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-app-subtle)'),
-                        border: m.has_time_limit ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-                        opacity: m.is_tentative ? 0.4 : 1,
-                        cursor: m.is_tentative ? "not-allowed" : "pointer"
+                        padding: "6px 10px", 
+                        fontSize: "0.8rem", 
+                        fontWeight: 700,
+                        width: "100%",
+                        border: m.is_tentative ? "1px dashed var(--accent-primary)" : "1px solid var(--border-subtle)",
+                        background: m.is_tentative ? "var(--bg-app-subtle)" : "white",
+                        color: m.is_tentative ? "var(--accent-primary)" : "inherit"
                       }}
-                      onClick={() => {
-                        if (m.is_tentative) return;
-                        const isOpening = activeTimelineHud.index !== i || activeTimelineHud.type !== 'time';
-                        setActiveTimelineHud(isOpening ? { index: i, type: 'time' } : { index: null, type: null });
-                        if (isOpening) {
-                          handleImportantDateChange(i, "has_time_limit", true);
-                        }
-                      }}
-                    >
-                      {m.has_time_limit && m.start_time ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65rem', fontWeight: 900, color: 'var(--accent-primary)' }}>
-                          <Clock size={10} />
-                          <span>{m.start_time}</span>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.6 }}>
-                          <Clock size={10} />
-                          <span style={{ fontSize: '0.65rem', fontWeight: 800 }}>+ Set Time</span>
-                        </div>
-                      )}
-                    </button>
+                      value={m.date || ""}
+                      onChange={(e) =>
+                        handleImportantDateChange(i, "date", e.target.value)
+                      }
+                    />
                   </div>
                   
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', zIndex: 10 }}>
                     <button
                       className={`action-pellet ${m.cta_text && m.action_url ? 'active' : ''}`}
                       style={{ width: '100%', justifyContent: 'center' }}
-                      onClick={() => {
-                        const isOpening = activeTimelineHud.index !== i || activeTimelineHud.type !== 'cta';
-                        setActiveTimelineHud(isOpening ? { index: i, type: 'cta' } : { index: null, type: null });
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        const isOpening = !m.show_cta_popover;
+                        captureAnchor(e);
+                        handleImportantDateChange(i, "show_cta_popover", isOpening);
+                        if (isOpening) {
+                          handleImportantDateChange(i, "show_popover", false);
+                          setTimelineErrors(prev => ({ ...prev, [`${i}-cta`]: null }));
+                        }
                       }}
                     >
                       {m.cta_text && m.action_url ? (
@@ -1816,19 +1656,172 @@ export default function AdminDashboard() {
                       ) : (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Plus size={10} />
-                          <span>Action / CTA</span>
+                          <span>Action Button</span>
                         </div>
                       )}
                     </button>
+
+                    {m.show_cta_popover && createPortal(
+                      <AnimatePresence>
+                        {m.show_cta_popover && (
+                          <div style={{
+                            position: "fixed",
+                            inset: 0,
+                            zIndex: 9998,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "20px"
+                          }}>
+                            <motion.div 
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              style={{ 
+                                position: "absolute", 
+                                inset: 0, 
+                                cursor: "default",
+                                background: "rgba(0,0,0,0.2)",
+                                backdropFilter: "blur(4px)"
+                              }} 
+                              onClick={() => handleImportantDateChange(i, "show_cta_popover", false)}
+                            />
+                            <motion.div
+                              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                              style={{
+                                position: "relative",
+                                width: "100%",
+                                maxWidth: "360px",
+                                background: "white",
+                                padding: "1.25rem",
+                                borderRadius: "20px",
+                                border: "1px solid var(--border-strong)",
+                                boxShadow: "0 20px 40px -8px rgba(0,0,0,0.2)",
+                                zIndex: 9999,
+                              }}
+                            >
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                marginBottom: '1.25rem' 
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--accent-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent-primary)" }}>
+                                    <ExternalLink size={16} />
+                                  </div>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Configure Action Button</span>
+                                </div>
+                                <button 
+                                  onClick={() => handleImportantDateChange(i, "show_cta_popover", false)}
+                                  style={{
+                                    background: 'var(--bg-app-subtle)',
+                                    border: 'none',
+                                    width: '28px',
+                                    height: '28px',
+                                    color: 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  className="hover-bg-subtle"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                <div>
+                                  <label className="form-label" style={{ fontSize: '0.65rem' }}>Action Button Text</label>
+                                  <input
+                                    className="form-input"
+                                    placeholder="e.g. Apply Now"
+                                    style={{ fontSize: "0.8rem", padding: "10px 12px" }}
+                                    value={m.cta_text || ""}
+                                    onChange={(e) =>
+                                      handleImportantDateChange(i, "cta_text", e.target.value)
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <label className="form-label" style={{ fontSize: '0.65rem' }}>Destination URL</label>
+                                  <input
+                                    className="form-input"
+                                    placeholder="https://..."
+                                    type="url"
+                                    style={{ fontSize: "0.8rem", padding: "10px 12px" }}
+                                    value={m.action_url || ""}
+                                    onChange={(e) =>
+                                      handleImportantDateChange(i, "action_url", e.target.value)
+                                    }
+                                  />
+                                </div>
+                                {timelineErrors[`${i}-cta`] && (
+                                  <p style={{ color: 'var(--accent-danger)', fontSize: '0.65rem', marginTop: '0.25rem', fontWeight: 600 }}>
+                                    {timelineErrors[`${i}-cta`]}
+                                  </p>
+                                )}
+                                <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+                                  <button
+                                    className="btn"
+                                    style={{ 
+                                      height: "40px", 
+                                      fontSize: "0.8rem", 
+                                      flex: 1, 
+                                      background: "transparent", 
+                                      border: "1px solid var(--border-strong)",
+                                      color: "var(--text-secondary)"
+                                    }}
+                                    onClick={() => {
+                                      handleImportantDateChange(i, "cta_text", "");
+                                      handleImportantDateChange(i, "action_url", "");
+                                      setTimelineErrors(prev => ({ ...prev, [`${i}-cta`]: null }));
+                                    }}
+                                  >
+                                    Clear
+                                  </button>
+                                  <button
+                                    className="btn btn-primary"
+                                    style={{ height: "40px", fontSize: "0.85rem", flex: 2 }}
+                                    onClick={() => {
+                                      const isValid = (!!m.cta_text === !!m.action_url);
+                                      if (!isValid) {
+                                        setTimelineErrors(prev => ({ ...prev, [`${i}-cta`]: "Label and URL both required." }));
+                                        return;
+                                      }
+                                      setTimelineErrors(prev => ({ ...prev, [`${i}-cta`]: null }));
+                                      handleImportantDateChange(i, "show_cta_popover", false);
+                                    }}
+                                  >
+                                    Done
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          </div>
+                        )}
+                      </AnimatePresence>,
+                      document.body
+                    )}
                   </div>
 
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', zIndex: 10 }}>
                     <button
                       className={`action-pellet ${m.resources?.video?.url ? 'active' : ''}`}
                       style={{ width: '100%', justifyContent: 'center' }}
-                      onClick={() => {
-                        const isOpening = activeTimelineHud.index !== i || activeTimelineHud.type !== 'video';
-                        setActiveTimelineHud(isOpening ? { index: i, type: 'video' } : { index: null, type: null });
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        const isOpening = !m.show_popover;
+                        captureAnchor(e);
+                        handleImportantDateChange(i, "show_popover", isOpening);
+                        if (isOpening) {
+                          handleImportantDateChange(i, "show_cta_popover", false);
+                          setTimelineErrors(prev => ({ ...prev, [`${i}-video`]: null }));
+                        }
                       }}
                     >
                       {m.resources?.video?.url && m.resources?.video?.title ? (
@@ -1843,17 +1836,162 @@ export default function AdminDashboard() {
                         </div>
                       )}
                     </button>
-                  </div>
 
-                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    {m.show_popover && createPortal(
+                      <AnimatePresence>
+                        {m.show_popover && (
+                          <div style={{
+                            position: "fixed",
+                            inset: 0,
+                            zIndex: 9998,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "20px"
+                          }}>
+                            <motion.div 
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              style={{ 
+                                position: "absolute", 
+                                inset: 0, 
+                                cursor: "default",
+                                background: "rgba(0,0,0,0.2)",
+                                backdropFilter: "blur(4px)"
+                              }} 
+                              onClick={() => handleImportantDateChange(i, "show_popover", false)}
+                            />
+                            <motion.div
+                              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                              style={{
+                                position: "relative",
+                                width: "100%",
+                                maxWidth: "360px",
+                                background: "white",
+                                padding: "1.25rem",
+                                borderRadius: "20px",
+                                border: "1px solid var(--border-strong)",
+                                boxShadow: "0 20px 40px -8px rgba(0,0,0,0.2)",
+                                zIndex: 9999,
+                              }}
+                            >
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                marginBottom: '1.25rem' 
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "var(--accent-primary-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent-primary)" }}>
+                                    <Video size={16} />
+                                  </div>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Video Resource</span>
+                                </div>
+                                <button 
+                                  onClick={() => handleImportantDateChange(i, "show_popover", false)}
+                                  style={{
+                                    background: 'var(--bg-app-subtle)',
+                                    border: 'none',
+                                    width: '28px',
+                                    height: '28px',
+                                    color: 'var(--text-secondary)',
+                                    cursor: 'pointer',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  className="hover-bg-subtle"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                <div>
+                                  <label className="form-label" style={{ fontSize: '0.65rem' }}>Video Title</label>
+                                    <input
+                                      className="form-input"
+                                      placeholder="e.g. Strategy Guide"
+                                      style={{ fontSize: "0.8rem", padding: "10px 12px" }}
+                                      value={m.resources?.video?.title || ""}
+                                      onChange={(e) =>
+                                        handleImportantDateChange(i, "resources.video.title", e.target.value)
+                                      }
+                                    />
+                                </div>
+                                <div>
+                                    <label className="form-label" style={{ fontSize: '0.65rem' }}>YouTube URL</label>
+                                    <input
+                                      className="form-input"
+                                      placeholder="https://youtube..."
+                                      type="url"
+                                      style={{ fontSize: "0.8rem", padding: "10px 12px" }}
+                                      value={m.resources?.video?.url || ""}
+                                      onChange={(e) =>
+                                        handleImportantDateChange(i, "resources.video.url", e.target.value)
+                                      }
+                                    />
+                                </div>
+                                {timelineErrors[`${i}-video`] && (
+                                  <p style={{ color: 'var(--accent-danger)', fontSize: '0.65rem', marginTop: '0.25rem', fontWeight: 600 }}>
+                                    {timelineErrors[`${i}-video`]}
+                                  </p>
+                                )}
+                                <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
+                                  <button
+                                    className="btn"
+                                    style={{ 
+                                      height: "40px", 
+                                      fontSize: "0.8rem", 
+                                      flex: 1, 
+                                      background: "transparent", 
+                                      border: "1px solid var(--border-strong)",
+                                      color: "var(--text-secondary)"
+                                    }}
+                                    onClick={() => {
+                                      handleImportantDateChange(i, "resources.video.title", "");
+                                      handleImportantDateChange(i, "resources.video.url", "");
+                                      setTimelineErrors(prev => ({ ...prev, [`${i}-video`]: null }));
+                                    }}
+                                  >
+                                    Clear
+                                  </button>
+                                  <button
+                                    className="btn btn-primary"
+                                    style={{ height: "40px", fontSize: "0.85rem", flex: 2 }}
+                                    onClick={() => {
+                                      const isValid = (!!m.resources?.video?.title === !!m.resources?.video?.url);
+                                      if (!isValid) {
+                                        setTimelineErrors(prev => ({ ...prev, [`${i}-video`]: "Title and YouTube URL both required." }));
+                                        return;
+                                      }
+                                      setTimelineErrors(prev => ({ ...prev, [`${i}-video`]: null }));
+                                      handleImportantDateChange(i, "show_popover", false);
+                                    }}
+                                  >
+                                    Ready
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          </div>
+                        )}
+                      </AnimatePresence>,
+                      document.body
+                    )}
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "flex-end", zIndex: 1 }}>
                     <button
                       onClick={() => removeImportantDate(i)}
                       style={{
-                        padding: "8px",
+                        padding: "4px",
                         color: "var(--accent-danger)",
                         border: "none",
-                        background: "var(--bg-app-subtle)",
-                        borderRadius: "8px",
+                        background: "transparent",
                         cursor: 'pointer'
                       }}
                     >
@@ -1861,100 +1999,7 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </motion.div>
-
-                {/* --- INLINE HUD EXPANSION --- */}
-                <AnimatePresence>
-                  {activeTimelineHud.index === i && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                      animate={{ height: 'auto', opacity: 1, marginTop: 12 }}
-                      exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                      style={{ 
-                        overflow: 'hidden',
-                        background: 'rgba(255,255,255,0.4)',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border-subtle)',
-                        padding: '12px'
-                      }}
-                    >
-                      {activeTimelineHud.type === 'time' && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <Clock size={14} color="var(--accent-primary)" />
-                              <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>Temporal Settings</span>
-                            </div>
-                            <button onClick={() => setActiveTimelineHud({ index: null, type: null })} className="hover-bg-subtle" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '50%' }}>
-                              <X size={14} />
-                            </button>
-                          </div>
-                          
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.7rem' }}>Event Time</label>
-                            <input 
-                              type="time" 
-                              className="form-input" 
-                              style={{ fontWeight: 800, fontSize: '0.9rem' }}
-                              value={m.start_time || ""} 
-                              onChange={(e) => {
-                                handleImportantDateChange(i, "start_time", e.target.value);
-                                if (!m.has_time_limit) handleImportantDateChange(i, "has_time_limit", true);
-                              }} 
-                            />
-                            <p style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                              Set the specific hour/minute for this event.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {activeTimelineHud.type === 'cta' && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <ExternalLink size={14} color="var(--accent-primary)" />
-                              <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>Configuration Action</span>
-                            </div>
-                            <button onClick={() => setActiveTimelineHud({ index: null, type: null })} className="hover-bg-subtle" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '50%' }}>
-                              <X size={14} />
-                            </button>
-                          </div>
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.6rem' }}>Button Text</label>
-                            <input className="form-input" placeholder="e.g. Apply Now" value={m.cta_text || ""} onChange={(e) => handleImportantDateChange(i, "cta_text", e.target.value)} />
-                          </div>
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.6rem' }}>URL</label>
-                            <input className="form-input" placeholder="https://..." value={m.action_url || ""} onChange={(e) => handleImportantDateChange(i, "action_url", e.target.value)} />
-                          </div>
-                        </div>
-                      )}
-
-                      {activeTimelineHud.type === 'video' && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <Video size={14} color="var(--accent-primary)" />
-                              <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>Video Asset</span>
-                            </div>
-                            <button onClick={() => setActiveTimelineHud({ index: null, type: null })} className="hover-bg-subtle" style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '50%' }}>
-                              <X size={14} />
-                            </button>
-                          </div>
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.6rem' }}>Title</label>
-                            <input className="form-input" placeholder="e.g. Strategy Guide" value={m.resources?.video?.title || ""} onChange={(e) => handleImportantDateChange(i, "resources.video.title", e.target.value)} />
-                          </div>
-                          <div>
-                            <label className="form-label" style={{ fontSize: '0.6rem' }}>YouTube Link</label>
-                            <input className="form-input" placeholder="https://..." value={m.resources?.video?.url || ""} onChange={(e) => handleImportantDateChange(i, "resources.video.url", e.target.value)} />
-                          </div>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </Reorder.Item>
+            </Reorder.Item>
           ))}
         </Reorder.Group>
         <div
@@ -2005,68 +2050,79 @@ export default function AdminDashboard() {
   );
 
   const UNIVERSAL_DEGREES = [
+    { id: "msc_nursing", label: "M.Sc. Nursing" },
     { id: "bsc_nursing", label: "B.Sc. (Hons.) Nursing / B.Sc. Nursing" },
     { id: "post_basic_bsc", label: "B.Sc. (Post-Certificate) / Post-Basic B.Sc. Nursing" },
     { id: "gnm", label: "Diploma in General Nursing and Midwifery (G.N.M.)" },
+    { id: "anm", label: "Auxiliary Nurse Midwifery (A.N.M.)" },
     { id: "diploma_psychiatry", label: "Diploma in Psychiatry" }
   ];
 
-  const renderEducation = () => (
-    <div className="animate-in">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "2rem" }}>
-        {renderSectionHeader(
-          "Academic & Clinical Matrix",
-          "Universal drawer protocol ensuring zero-ambiguity.",
-          GraduationCap,
-        )}
-      </div>
 
-      <div style={{ 
-        background: "white", 
-        padding: "1rem 1.25rem", 
-        borderRadius: "14px", 
-        border: "1px solid var(--border-subtle)", 
-        display: "flex", 
-        justifyContent: "flex-start", 
-        gap: "4rem", 
-        alignItems: "center", 
-        marginBottom: "1.5rem",
-        boxShadow: "var(--shadow-sm)"
-      }}>
-        <div style={{ minWidth: "180px" }}>
-          <h3 style={{ fontSize: "0.9rem", fontWeight: 800, marginBottom: "0.15rem" }}>Academic Baseline</h3>
-          <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Minimum institutional schooling.</p>
+  const renderEducationModern = () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+      {/* Bento Header: Academic Baseline */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="premium-glass"
+        style={{ 
+          padding: "1.75rem 2.5rem", 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center",
+          background: "linear-gradient(to right, white, var(--bg-app-subtle))"
+        }}
+      >
+        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
+          <div style={{ 
+            width: "54px", 
+            height: "54px", 
+            borderRadius: "16px", 
+            background: "var(--accent-primary)", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            color: "white",
+            boxShadow: "var(--shadow-glow)"
+          }}>
+            <BookOpen size={24} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>Minimum Schooling Level</h3>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", maxWidth: "400px" }}>Set the standard baseline education required before professional nursing certification.</p>
+          </div>
         </div>
         
-        <select 
-          value={activeExam.hs_science_required ? '12th_science' : (activeExam.academic_baseline || '12th')}
-          onChange={(e) => {
-            const val = e.target.value;
-            updateExamData(p => ({ 
-              ...p, 
-              academic_baseline: val, 
-              hs_science_required: val === '12th_science'
-            }));
-          }}
-          style={{ 
-            padding: "8px 12px", 
-            borderRadius: "10px", 
-            border: "1.5px solid var(--border-strong)", 
-            fontSize: "0.85rem", 
-            fontWeight: 700, 
-            background: "var(--bg-app)",
-            color: "var(--text-primary)",
-            cursor: "pointer",
-            outline: "none",
-            minWidth: "220px"
-          }}
-        >
-          <option value="10th">Matriculation (Standard 10th)</option>
-          <option value="12th">Standard 10+2 (Higher Secondary)</option>
-          <option value="12th_science">10+2 with Science (PCB Required)</option>
-        </select>
-      </div>
+        <div style={{ position: "relative", minWidth: "280px" }}>
+            <select 
+              value={activeExam.hs_science_required ? '12th_science' : (activeExam.academic_baseline || '12th')}
+              onChange={(e) => {
+                const val = e.target.value;
+                updateExamData(p => ({ 
+                  ...p, 
+                  academic_baseline: val, 
+                  hs_science_required: val === '12th_science'
+                }));
+              }}
+              className="input-glass"
+              style={{ fontWeight: 800, fontSize: "0.95rem", paddingRight: "40px" }}
+            >
+              <option value="10th">Matriculation (Standard 10th)</option>
+              <option value="12th">Standard 10+2 (Higher Secondary)</option>
+              <option value="12th_science">10+2 with Science (PCB Required)</option>
+            </select>
+            <ChevronRight size={18} style={{ position: "absolute", right: "16px", top: "50%", transform: "translateY(-50%) rotate(90deg)", pointerEvents: "none", color: "var(--text-tertiary)" }} />
+        </div>
+      </motion.div>
 
+      {/* Qualification Matrix */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+           <h3 className="label-premium" style={{ marginBottom: 0, fontSize: "0.75rem" }}>Qualification Matrix</h3>
+           <div style={{ fontSize: "0.65rem", color: "var(--accent-primary)", fontWeight: 700, opacity: 0.9 }}>Tap active cards to configure mandates</div>
+        </div>
+        
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem" }}>
           {UNIVERSAL_DEGREES.map((degMeta, idx) => {
             const d = degMeta.id;
@@ -2161,73 +2217,41 @@ export default function AdminDashboard() {
                     {degMeta.label}
                   </h4>
                   {isAuth ? (
-                    <div style={{ marginTop: "0.75rem", display: "flex", flexDirection: "column", gap: "12px" }}>
-                      <div style={{ display: 'flex', flexWrap: "wrap", gap: "6px", alignItems: 'center' }}>
-                        {/* Non-interactive Status Tag */}
-                        <div style={{ 
-                          fontSize: "0.55rem", 
-                          padding: "3px 8px",
-                          background: "var(--bg-app-subtle)",
-                          color: "var(--text-secondary)",
-                          borderRadius: "6px",
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontWeight: 700,
-                          textTransform: 'uppercase'
-                        }}>
-                          <Map size={9} /> {activeExam.degrees[d]?.registration_protocol?.scope === 'specific' ? activeExam.degrees[d]?.registration_protocol?.state : "National"}
-                        </div>
-                        {activeExam.degrees[d]?.requires_experience && (
-                          <div style={{ 
-                            fontSize: "0.55rem", 
-                            padding: "3px 8px", 
-                            background: "var(--accent-success-bg)", 
-                            color: "var(--accent-success)", 
-                            borderRadius: "6px",
-                            fontWeight: 700,
-                            textTransform: 'uppercase' 
-                          }}>
-                             {activeExam.degrees[d]?.req_exp_months}m Clin. Exp
-                          </div>
-                        )}
+                    <div style={{ marginTop: "0.75rem", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      <div className="action-pellet active" style={{ fontSize: "0.58rem", padding: "3px 8px" }}>
+                        <Map size={10} /> {activeExam.degrees[d]?.registration_protocol?.scope === 'specific' ? activeExam.degrees[d]?.registration_protocol?.state : "National"}
                       </div>
-                      
-                      {/* Primary Action Button */}
-                      <motion.div 
-                        whileHover={{ scale: 1.02, translateY: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          gap: '8px', 
-                          fontSize: '0.7rem', 
-                          fontWeight: 800, 
-                          color: 'white',
-                          background: 'var(--accent-primary)',
-                          padding: '10px 14px',
-                          borderRadius: '12px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          marginTop: '4px',
-                          boxShadow: 'var(--shadow-glow)',
-                          cursor: 'pointer'
-                        }}>
-                        <Settings size={14} fill="currentColor" />
-                        Set Eligibility Rules
-                      </motion.div>
+                      {activeExam.degrees[d]?.requires_experience && (
+                        <div className="action-pellet" style={{ fontSize: "0.58rem", padding: "3px 8px", background: "var(--accent-primary-bg)", color: "var(--accent-primary)", borderColor: "transparent" }}>
+                           {activeExam.degrees[d]?.req_exp_months}m Clin. Exp
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "0.4rem", fontStyle: "italic", lineHeight: 1.4 }}>Enable this qualification to configure rules.</p>
                   )}
                 </div>
               </motion.div>
-            );
+            )
           })}
         </div>
+      </div>
+    </div>
+  );
 
-      <AnimatePresence>{selectedDegree && renderEducationRuleDrawer()}</AnimatePresence>
+  const renderEducation = () => (
+    <div className="animate-in">
+      {renderSectionHeader(
+        "Education & Clinical Qualifications",
+        "Define the mandatory schooling and healthcare certifications for this role.",
+        GraduationCap,
+      )}
+      
+      <div style={{ marginTop: "2rem" }}>
+        {renderEducationModern()}
+      </div>
+
+      {selectedDegree && renderEducationRuleDrawer()}
     </div>
   );
 
@@ -2389,7 +2413,7 @@ export default function AdminDashboard() {
   // Remaining modular renderers kept legacy but consistent with the cockpit UI
 
   const toggleMaritalStatus = (status) => {
-    const current = activeExam.allowed_marital_statuses || [];
+    const current = activeExam.allowed_marital_statuses || ["Unmarried", "Married", "Widow", "Divorced / Separated"];
     const updated = current.includes(status)
       ? current.filter((s) => s !== status)
       : [...current, status];
@@ -2398,20 +2422,47 @@ export default function AdminDashboard() {
 
   const renderAgeLimits = () => {
     if (!activeExam) return null;
+    
+    const allowedArr = activeExam.allowed_marital_statuses || ["Unmarried", "Married", "Widow", "Divorced / Separated"];
+    const hasMaritalExemption = allowedArr.includes("Widow") || allowedArr.includes("Divorced / Separated");
+
+    const toggleMaritalExemption = (val) => {
+      const baseline = ["Unmarried", "Married"];
+      const updated = val 
+        ? [...baseline, "Widow", "Divorced / Separated"] 
+        : baseline;
+      updateExamData((p) => ({ ...p, allowed_marital_statuses: updated }));
+    };
+
+    const renderPremiumInput = (label, value, onChange, suffix = "Yrs", placeholder = "", color = "var(--accent-primary)") => (
+      <div style={{ flex: 1 }}>
+        <div className="label-premium" style={{ fontSize: "0.55rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", marginBottom: "4px" }}>{label}</div>
+        <div style={{ position: 'relative', background: "white", borderRadius: "8px", border: "1.5px solid var(--border-subtle)", transition: "all 0.2s", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+          <input 
+            type="number" 
+            className="input-glass" 
+            style={{ width: "100%", fontWeight: 800, color: "#0F172A", border: "none", background: "transparent", padding: "0.5rem 0.75rem", paddingRight: "45px" }} 
+            placeholder={placeholder}
+            value={value ?? ""} 
+            onChange={onChange} 
+          />
+          <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.55rem', fontWeight: 900, color: color, opacity: 0.8, pointerEvents: 'none', textTransform: 'uppercase' }}>{suffix}</span>
+        </div>
+      </div>
+    );
+
     return (
       <div
         className="animate-in"
-        style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+        style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
       >
-        {/* High-Densitity Header (Nav-Aligned) */}
         {renderSectionHeader(
-          "Age Eligibility Matrix",
-          "Institutional benchmarks and precision gate-logic.",
+          "Age Eligibility Rules",
+          "Set the standard age limits and relaxation criteria precisely as per the notification.",
           Users,
         )}
 
-        <div className="bento-grid">
-          {/* Module 1: MASTER PARAMETERS (Span 12) - Grouped for High Density */}
+        <div className="bento-grid" style={{ alignItems: "stretch" }}>
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -2420,11 +2471,11 @@ export default function AdminDashboard() {
               gridColumn: "span 12",
               display: "grid",
               gridTemplateColumns: "repeat(12, 1fr)",
-              gap: "2rem",
+              gap: "2.5rem",
               alignItems: "center",
+              padding: "1.5rem 2rem"
             }}
           >
-            {/* Part A: Pivot Date (The Master Reference) */}
             <div
               style={{
                 gridColumn: "span 4",
@@ -2437,42 +2488,35 @@ export default function AdminDashboard() {
                 style={{
                   position: "absolute",
                   right: "0.5rem",
-                  top: "-1rem",
+                  top: "-1.25rem",
                   fontSize: "3.5rem",
                   fontWeight: 800,
                   color: "var(--accent-institutional)",
-                  opacity: 0.04,
+                  opacity: 0.05,
                   pointerEvents: "none",
                 }}
               >
                 {activeExam.as_on_date?.split("-")[0] || "REF"}
               </div>
-              <div className="label-premium">Age as on (Cut-off)</div>
+              <div className="label-premium" style={{ fontWeight: 800, color: "#0F172A", letterSpacing: "0.02em" }}>AGE AS ON (CUT-OFF)</div>
               <input
                 type="date"
                 name="as_on_date"
                 className="input-glass"
                 style={{
                   width: "100%",
-                  fontWeight: 700,
+                  fontWeight: 800,
+                  color: "#0F172A",
                   padding: "0.6rem 0.75rem",
+                  marginTop: "8px",
+                  border: "1.5px solid var(--border-strong)"
                 }}
                 value={activeExam.as_on_date || ""}
                 onChange={handleTextChange}
               />
-              <p
-                style={{
-                  fontSize: "0.65rem",
-                  color: "var(--text-tertiary)",
-                  marginTop: "0.75rem",
-                  fontWeight: 500,
-                }}
-              >
-                Gazette Pivot Date
-              </p>
+              <p style={{ fontSize: "0.65rem", color: "#475569", marginTop: "1rem", fontWeight: 600 }}>Age calculation pivot date</p>
             </div>
 
-            {/* Part B: Basic Thresholds (Universal & Male Engine) */}
             <div style={{ gridColumn: "span 8", position: "relative" }}>
               <div
                 style={{
@@ -2480,707 +2524,181 @@ export default function AdminDashboard() {
                   right: "0",
                   top: "50%",
                   transform: "translateY(-50%)",
-                  fontSize: "4rem",
+                  fontSize: "5rem",
                   fontWeight: 800,
                   color: "var(--accent-primary)",
                   opacity: 0.03,
                   pointerEvents: "none",
                 }}
               >
-                {activeExam.base_age_min || 18}-
-                {activeExam.base_age_max_male || 35}
+                {activeExam.base_age_min || 18}-{activeExam.base_age_max_male || 35}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem",
-                }}
-              >
-                <div className="label-premium" style={{ margin: 0 }}>
-                  Threshold Configuration
-                </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                <div className="label-premium" style={{ margin: 0, fontWeight: 800, color: "#0F172A" }}>Standard Age Limits</div>
                 <div
-                  onClick={() =>
-                    updateExamData((p) => ({
-                      ...p,
-                      has_female_specific_age: !p.has_female_specific_age,
-                    }))
-                  }
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    cursor: "pointer",
-                    padding: "4px 8px",
-                    background: "var(--accent-primary-bg)",
-                    borderRadius: "50px",
-                  }}
+                  onClick={() => updateExamData((p) => ({ ...p, has_female_specific_age: !p.has_female_specific_age }))}
+                  style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "6px 12px", background: activeExam.has_female_specific_age ? "var(--accent-primary-bg)" : "rgba(15, 23, 42, 0.05)", borderRadius: "50px", border: activeExam.has_female_specific_age ? "1px solid var(--accent-primary-subtle)" : "1px solid transparent" }}
                 >
-                  <span
-                    style={{
-                      fontSize: "0.55rem",
-                      fontWeight: 900,
-                      color: activeExam.has_female_specific_age
-                        ? "var(--accent-primary)"
-                        : "var(--text-tertiary)",
-                    }}
-                  >
-                    FEMALE OVERRIDE
-                  </span>
-                  <div
-                    style={{
-                      width: "24px",
-                      height: "12px",
-                      background: activeExam.has_female_specific_age
-                        ? "var(--accent-primary)"
-                        : "rgba(0,0,0,0.1)",
-                      borderRadius: "10px",
-                      position: "relative",
-                    }}
-                  >
-                    <motion.div
-                      animate={{
-                        x: activeExam.has_female_specific_age ? 12 : 2,
-                      }}
-                      style={{
-                        width: "8px",
-                        height: "8px",
-                        background: "white",
-                        borderRadius: "50%",
-                        position: "absolute",
-                        top: "2px",
-                      }}
-                    />
+                  <span style={{ fontSize: "0.55rem", fontWeight: 900, color: activeExam.has_female_specific_age ? "var(--accent-primary)" : "#64748b" }}>SET SEPARATE LIMITS FOR FEMALES</span>
+                  <div style={{ width: "26px", height: "14px", background: activeExam.has_female_specific_age ? "var(--accent-primary)" : "#cbd5e1", borderRadius: "10px", position: "relative" }}>
+                    <motion.div animate={{ x: activeExam.has_female_specific_age ? 14 : 2 }} style={{ width: "10px", height: "10px", background: "white", borderRadius: "50%", position: "absolute", top: "2px" }} />
                   </div>
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: activeExam.has_female_specific_age
-                    ? "repeat(4, 1fr)"
-                    : "repeat(2, 1fr)",
-                  gap: "1rem",
-                }}
-              >
-                <div>
-                  <div
-                    className="label-premium"
-                    style={{ fontSize: "0.5rem", opacity: 0.5 }}
-                  >
-                    Min. Age (BASE)
-                  </div>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="number"
-                      name="base_age_min"
-                      className="input-glass"
-                      style={{ width: "100%", fontWeight: 700, paddingRight: '30px' }}
-                      value={activeExam.base_age_min ?? ""}
-                      onChange={handleNumberChange}
-                    />
-                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-tertiary)', pointerEvents: 'none', textTransform: 'uppercase' }}>Yrs</span>
-                  </div>
-                </div>
-                <div>
-                  <div
-                    className="label-premium"
-                    style={{ fontSize: "0.5rem", opacity: 0.5 }}
-                  >
-                    Max. Age (BASE)
-                  </div>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type="number"
-                      name="base_age_max_male"
-                      className="input-glass"
-                      style={{ width: "100%", fontWeight: 700, paddingRight: '30px' }}
-                      value={activeExam.base_age_max_male ?? ""}
-                      onChange={handleNumberChange}
-                    />
-                    <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-tertiary)', pointerEvents: 'none', textTransform: 'uppercase' }}>Yrs</span>
-                  </div>
-                </div>
+              <div style={{ display: "grid", gridTemplateColumns: activeExam.has_female_specific_age ? "repeat(4, 1fr)" : "repeat(2, 1fr)", gap: "1.25rem" }}>
+                {renderPremiumInput("Minimum Age", activeExam.base_age_min, handleNumberChange, "Yrs", "", "var(--text-tertiary)")}
+                {renderPremiumInput("Maximum Age", activeExam.base_age_max_male, handleNumberChange, "Yrs", "", "var(--text-tertiary)")}
                 {activeExam.has_female_specific_age && (
                   <>
-                    <div>
-                      <div
-                        className="label-premium"
-                        style={{
-                          fontSize: "0.5rem",
-                          color: "var(--accent-primary)",
-                        }}
-                      >
-                        Min. Age (FEMALE)
-                      </div>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="number"
-                          name="base_age_min_female"
-                          className="input-glass"
-                          style={{
-                            width: "100%",
-                            fontWeight: 700,
-                            borderColor: "var(--accent-primary)",
-                            paddingRight: '30px'
-                          }}
-                          placeholder={activeExam.base_age_min}
-                          value={activeExam.base_age_min_female ?? ""}
-                          onChange={handleNumberChange}
-                        />
-                        <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-primary)', opacity: 0.8, pointerEvents: 'none', textTransform: 'uppercase' }}>Yrs</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div
-                        className="label-premium"
-                        style={{
-                          fontSize: "0.5rem",
-                          color: "var(--accent-primary)",
-                        }}
-                      >
-                        Max. Age (FEMALE)
-                      </div>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="number"
-                          name="base_age_max_female"
-                          className="input-glass"
-                          style={{
-                            width: "100%",
-                            fontWeight: 700,
-                            borderColor: "var(--accent-primary)",
-                            paddingRight: '30px'
-                          }}
-                          placeholder={activeExam.base_age_max_male}
-                          value={activeExam.base_age_max_female ?? ""}
-                          onChange={handleNumberChange}
-                        />
-                        <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-primary)', opacity: 0.8, pointerEvents: 'none', textTransform: 'uppercase' }}>Yrs</span>
-                      </div>
-                    </div>
+                    {renderPremiumInput("Min (Female)", activeExam.base_age_min_female, handleNumberChange, "Yrs", activeExam.base_age_min, "var(--accent-primary)")}
+                    {renderPremiumInput("Max (Female)", activeExam.base_age_max_female, handleNumberChange, "Yrs", activeExam.base_age_max_male, "var(--accent-primary)")}
                   </>
                 )}
               </div>
             </div>
           </motion.div>
 
-          {/* Module 2: RELAXATION MATRIX (Span 7) - Combined High-Densitity Matrix */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="premium-glass"
-            style={{ gridColumn: "span 7" }}
-          >
-            <div className="label-premium">
-              Relaxation Matrix: Category & PwBD
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "2rem",
-                marginTop: "1rem",
-              }}
-            >
-              {/* Category Vertical Stack */}
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
-              >
-                {["OBC", "SC", "ST"].map((cat) => (
-                  <div
-                    key={cat}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "6px 12px",
-                      background: "rgba(15, 23, 42, 0.02)",
-                      borderRadius: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        fontWeight: 600,
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      {cat} Benefit
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input
-                        type="number"
-                        style={{
-                          width: "30px",
-                          background: "transparent",
-                          border: "none",
-                          borderBottom: "1px solid var(--border-strong)",
-                          textAlign: "right",
-                          fontWeight: 800,
-                          color: "var(--accent-primary)",
-                          fontSize: "0.85rem",
-                        }}
-                        value={activeExam.category_relaxations?.[cat] ?? ""}
-                        onChange={(e) =>
-                          handleCategoryRelaxation(cat, e.target.value)
-                        }
-                      />
-                      <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Yrs</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* PwBD Vertical Stack */}
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
-              >
-                {["UR", "OBC", "SC"].map((pCat) => (
-                  <div
-                    key={pCat}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "6px 12px",
-                      background: "rgba(15, 23, 42, 0.02)",
-                      borderRadius: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        fontWeight: 600,
-                        color: "var(--text-secondary)",
-                      }}
-                    >
-                      PwBD ({pCat})
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input
-                        type="number"
-                        style={{
-                          width: "30px",
-                          background: "transparent",
-                          border: "none",
-                          borderBottom: "1px solid var(--border-strong)",
-                          textAlign: "right",
-                          fontWeight: 800,
-                          color: "var(--accent-primary)",
-                          fontSize: "0.85rem",
-                        }}
-                        value={activeExam.pwbd_relaxations?.[pCat] ?? ""}
-                        onChange={(e) =>
-                          updateExamData((p) => ({
-                            ...p,
-                            pwbd_relaxations: {
-                              ...p.pwbd_relaxations,
-                              [pCat]: Number(e.target.value),
-                              ...(pCat === "SC"
-                                ? { ST: Number(e.target.value) }
-                                : {}),
-                            },
-                          }))
-                        }
-                      />
-                      <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Yrs</span>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Statutory PwBD Ceiling Entry */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "8px 12px",
-                    marginTop: "8px",
-                    background: "var(--accent-primary-bg)",
-                    borderRadius: "8px",
-                    border: "1px dashed var(--accent-primary-subtle)"
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: "0.65rem", fontWeight: 900, color: "var(--accent-primary)", textTransform: 'uppercase' }}>Maximum Age Cap (PwBD)</span>
-                    <span style={{ fontSize: "0.5rem", color: "var(--text-tertiary)" }}>Absolute upper limit after all relaxations</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <input
-                      type="number"
-                      style={{
-                        width: "35px",
-                        background: "transparent",
-                        border: "none",
-                        borderBottom: "1.5px solid var(--accent-primary)",
-                        textAlign: "right",
-                        fontWeight: 900,
-                        color: "var(--accent-primary)",
-                        fontSize: "0.9rem",
-                      }}
-                      placeholder="56"
-                      value={activeExam.pwbd_max_age_ceiling ?? ""}
-                      onChange={(e) =>
-                        updateExamData((p) => ({
-                          ...p,
-                          pwbd_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value)
-                        }))
-                      }
-                    />
-                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>Yrs</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p
-              style={{
-                fontSize: "0.6rem",
-                color: "var(--text-tertiary)",
-                marginTop: "1rem",
-                fontWeight: 500,
-                fontStyle: "italic",
-                textAlign: "center",
-              }}
-            >
-              Inclusive grace periods as per gazette guidelines.
-            </p>
-          </motion.div>
-
-          {/* Module 3: ENGINE WRAPPERS (Span 5) - ESM & Other Overrides */}
-          <div
-            style={{
-              gridColumn: "span 5",
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem",
-            }}
-          >
-            {/* Compact ESM Module */}
+          <div style={{ gridColumn: "span 12", display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: "1.25rem", alignItems: "stretch" }}>
             <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}
               className="premium-glass"
-              style={{ flex: 1, position: "relative" }}
+              style={{ gridColumn: "span 7", display: "flex", flexDirection: "column" }}
             >
-              <div
-                style={{
-                  position: "absolute",
-                  right: "-5px",
-                  bottom: "-5px",
-                  opacity: 0.04,
-                  pointerEvents: "none",
-                }}
-              >
-                <Shield
-                  size={60}
-                  color="var(--accent-institutional)"
-                  strokeWidth={3}
-                />
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                <div className="label-premium" style={{ margin: 0 }}>
-                  Ex-Servicemen
+              <div className="label-premium" style={{ fontWeight: 800, color: "#0F172A", marginBottom: "1.5rem" }}>Category-Wise Age Relaxations</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "2rem", flex: 1 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {["OBC", "SC", "ST"].map((cat) => (
+                    <div key={cat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "rgba(15, 23, 42, 0.03)", borderRadius: "10px", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#334155" }}>{cat} Category</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "white", padding: "4px 12px", borderRadius: "8px", border: "1.5px solid var(--border-subtle)" }}>
+                        <input type="number" style={{ width: "42px", background: "transparent", border: "none", textAlign: "right", fontWeight: 800, color: "var(--accent-primary)", fontSize: "0.9rem", outline: "none", padding: 0 }} value={activeExam.category_relaxations?.[cat] ?? ""} onChange={(e) => handleCategoryRelaxation(cat, e.target.value)} />
+                        <span style={{ fontSize: "0.55rem", fontWeight: 900, color: "var(--accent-primary)", opacity: 0.7 }}>YRS</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div
-                  onClick={() =>
-                    updateExamData((p) => ({
-                      ...p,
-                      has_esm_relaxation: !p.has_esm_relaxation,
-                    }))
-                  }
-                  style={{
-                    width: "24px",
-                    height: "12px",
-                    background: activeExam.has_esm_relaxation
-                      ? "var(--accent-primary)"
-                      : "rgba(0,0,0,0.1)",
-                    borderRadius: "10px",
-                    position: "relative",
-                    cursor: "pointer",
-                  }}
-                >
-                  <motion.div
-                    animate={{ x: activeExam.has_esm_relaxation ? 14 : 2 }}
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      background: "white",
-                      borderRadius: "50%",
-                      position: "absolute",
-                      top: "2px",
-                    }}
-                  />
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {["UR", "OBC", "SC", "ST"].map((pCat) => (
+                    <div key={pCat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "rgba(15, 23, 42, 0.03)", borderRadius: "10px", border: "1px solid rgba(15, 23, 42, 0.05)" }}>
+                      <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#334155" }}>PwBD ({pCat})</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "white", padding: "4px 12px", borderRadius: "8px", border: "1.5px solid var(--border-subtle)" }}>
+                        <input type="number" style={{ width: "42px", background: "transparent", border: "none", textAlign: "right", fontWeight: 800, color: "var(--accent-primary)", fontSize: "0.9rem", outline: "none", padding: 0 }} value={activeExam.pwbd_relaxations?.[pCat] ?? ""} onChange={(e) => handlePwBDRelaxation(pCat, e.target.value)} />
+                        <span style={{ fontSize: "0.55rem", fontWeight: 900, color: "var(--accent-primary)", opacity: 0.7 }}>YRS</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              {activeExam.has_esm_relaxation ? (
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
-                >
-                  <div
-                    style={{
-                      flex: 1,
-                      background: "rgba(255,255,255,0.6)",
-                      padding: "6px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border-subtle)",
-                    }}
-                  >
-                    <span
-                      className="label-premium"
-                      style={{
-                        fontSize: "0.45rem",
-                        opacity: 0.5,
-                        marginBottom: "2px",
-                      }}
-                    >
-                      Grace
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <input
-                        type="number"
-                        style={{
-                          width: "42px",
-                          background: "transparent",
-                          border: "none",
-                          fontSize: "1rem",
-                          fontWeight: 800,
-                          padding: 0,
-                          textAlign: 'center'
-                        }}
-                        placeholder="0"
-                        value={activeExam.esm_grace_period ?? ""}
-                        onChange={(e) =>
-                          updateExamData((p) => ({
-                            ...p,
-                            esm_grace_period: e.target.value === "" ? "" : Number(e.target.value),
-                          }))
-                        }
-                      />
-                      <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Yrs</span>
-                    </div>
-                  </div>
-
-                  {/* ESM Max Age Cap */}
-                  <div
-                    style={{
-                      flex: 1,
-                      background: "var(--accent-primary-bg)",
-                      padding: "6px 12px",
-                      borderRadius: "8px",
-                      border: "1px dashed var(--accent-primary-subtle)",
-                    }}
-                  >
-                    <span
-                      className="label-premium"
-                      style={{
-                        fontSize: "0.45rem",
-                        color: "var(--accent-primary)",
-                        fontWeight: 900,
-                        marginBottom: "2px",
-                        textTransform: 'uppercase'
-                      }}
-                    >
-                      Maximum Cap
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <input
-                        type="number"
-                        style={{
-                          width: "42px",
-                          background: "transparent",
-                          border: "none",
-                          fontSize: "1rem",
-                          fontWeight: 900,
-                          color: "var(--accent-primary)",
-                          padding: 0,
-                          textAlign: 'center'
-                        }}
-                        placeholder="50"
-                        value={activeExam.esm_max_age_ceiling ?? ""}
-                        onChange={(e) =>
-                          updateExamData((p) => ({
-                            ...p,
-                            esm_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value)
-                          }))
-                        }
-                      />
-                      <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>Yrs</span>
-                    </div>
-                  </div>
-
-                </div>
-              ) : (
-                <div
-                  style={{
-                    fontSize: "0.6rem",
-                    fontWeight: 900,
-                    color: "var(--text-tertiary)",
-                    letterSpacing: "0.05em",
-                    height: "36px",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  ESM BYPASS ENABLED
-                </div>
-              )}
+              <p style={{ fontSize: "0.65rem", color: "#475569", marginTop: "1.5rem", fontWeight: 600, textAlign: "center", background: "var(--bg-app-subtle)", padding: "6px", borderRadius: "6px" }}>Extra years allowed beyond the standard maximum age limit.</p>
             </motion.div>
 
-            {/* Govt Job Caution Toggle (Regulatory Module) */}
             <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.25 }}
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
               className="premium-glass"
-              style={{ flex: 1, position: "relative" }}
+              style={{ gridColumn: "span 5", display: "flex", flexDirection: "column", padding: 0, overflow: "hidden" }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+              <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--border-subtle)", background: "rgba(255,255,255,0.6)" }}>
+                <div className="label-premium" style={{ margin: 0, color: "#0F172A", fontWeight: 800 }}>Specific Group Relaxations</div>
+                <p style={{ fontSize: "0.55rem", color: "#475569", marginTop: "4px", fontWeight: 700 }}>Additional rules for Military, Govt, & Widows.</p>
+              </div>
+
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                <div style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.25rem 0.75rem 1.25rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: activeExam.has_esm_relaxation ? "var(--accent-primary-bg)" : "var(--bg-app-subtle)", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
+                        <Shield size={16} color={activeExam.has_esm_relaxation ? "var(--accent-primary)" : "#64748b"} />
+                      </div>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: activeExam.has_esm_relaxation ? "#0F172A" : "#64748b" }}>Ex-Servicemen (ESM)</span>
+                    </div>
+                    <div onClick={() => updateExamData((p) => ({ ...p, has_esm_relaxation: !p.has_esm_relaxation }))} style={{ width: "32px", height: "16px", background: activeExam.has_esm_relaxation ? "var(--accent-primary)" : "#cbd5e1", borderRadius: "10px", position: "relative", cursor: "pointer", transition: "background 0.2s" }}>
+                      <motion.div animate={{ x: activeExam.has_esm_relaxation ? 18 : 2 }} style={{ width: "12px", height: "12px", background: "white", borderRadius: "50%", position: "absolute", top: "2px" }} />
+                    </div>
+                  </div>
+                  <AnimatePresence>
+                    {activeExam.has_esm_relaxation && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden", background: "var(--bg-app-subtle)", margin: "0 1.25rem 1rem 1.25rem", borderRadius: "12px", border: "1px solid var(--border-subtle)" }}>
+                        <div style={{ padding: "1rem", display: "flex", gap: "1.5rem" }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: "0.5rem", color: "#64748b", fontWeight: 900, textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Grace Period (Yrs)</label>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "white", padding: "6px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                              <input type="number" style={{ width: "100%", background: "transparent", border: "none", fontSize: "0.9rem", fontWeight: 800, padding: 0, color: "var(--accent-primary)", outline: "none" }} value={activeExam.esm_grace_period ?? 3} onChange={(e) => updateExamData((p) => ({ ...p, esm_grace_period: Number(e.target.value) }))} />
+                              <span style={{ fontSize: "0.5rem", fontWeight: 900, color: "#94a3b8" }}>YRS</span>
+                            </div>
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: "0.5rem", color: "#64748b", fontWeight: 900, textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Max Ceiling</label>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "white", padding: "6px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                              <input type="number" style={{ width: "100%", background: "transparent", border: "none", fontSize: "0.9rem", fontWeight: 800, padding: 0, color: "var(--accent-primary)", outline: "none" }} placeholder="Nil" value={activeExam.esm_max_age ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_max_age: e.target.value ? Number(e.target.value) : "" }))} />
+                              <span style={{ fontSize: "0.5rem", fontWeight: 900, color: "#94a3b8" }}>MAX</span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.25rem 0.75rem 1.25rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: activeExam.show_govt_caution ? "var(--bg-institutional-soft)" : "var(--bg-app-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Briefcase size={16} color={activeExam.show_govt_caution ? "var(--accent-institutional)" : "#64748b"} />
+                      </div>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: activeExam.show_govt_caution ? "#0F172A" : "#64748b" }}>Govt. Employee Logic</span>
+                    </div>
+                    <div onClick={() => updateExamData((p) => ({ ...p, show_govt_caution: !p.show_govt_caution }))} style={{ width: "32px", height: "16px", background: activeExam.show_govt_caution ? "var(--accent-institutional)" : "#cbd5e1", borderRadius: "10px", position: "relative", cursor: "pointer", transition: "background 0.2s" }}>
+                      <motion.div animate={{ x: activeExam.show_govt_caution ? 18 : 2 }} style={{ width: "12px", height: "12px", background: "white", borderRadius: "50%", position: "absolute", top: "2px" }} />
+                    </div>
+                  </div>
+                  <AnimatePresence>
+                    {activeExam.show_govt_caution && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden", background: "var(--bg-app-subtle)", margin: "0 1.25rem 1rem 1.25rem", borderRadius: "12px", border: "1px solid var(--border-subtle)" }}>
+                        <div style={{ padding: "1rem" }}>
+                          <label style={{ fontSize: "0.5rem", color: "#64748b", fontWeight: 900, textTransform: "uppercase", display: "block", marginBottom: "6px" }}>Absolute Age Ceiling (State Rules)</label>
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "white", padding: "6px 12px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+                            <input type="number" style={{ width: "60px", background: "transparent", border: "none", fontSize: "0.95rem", fontWeight: 800, padding: 0, color: "var(--accent-primary)", outline: "none", textAlign: "right" }} placeholder="Nil" value={activeExam.absolute_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, absolute_age_ceiling: e.target.value ? Number(e.target.value) : "" }))} />
+                            <span style={{ fontSize: "0.45rem", fontWeight: 900, color: "var(--accent-primary)", opacity: 0.7, marginLeft: "4px" }}>YRS</span>
+                            <p style={{ fontSize: "0.6rem", color: "#475569", fontWeight: 600, margin: 0, borderLeft: "1.5px solid var(--border-subtle)", paddingLeft: "10px" }}>Absolute cap regardless of relaxations.</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 <div>
-                  <div className="label-premium" style={{ margin: 0 }}>
-                    Govt. Employee Logic
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.25rem 0.75rem 1.25rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: hasMaritalExemption ? "var(--accent-primary-bg)" : "var(--bg-app-subtle)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Users size={16} color={hasMaritalExemption ? "var(--accent-primary)" : "#64748b"} />
+                      </div>
+                      <span style={{ fontSize: "0.8rem", fontWeight: 700, color: hasMaritalExemption ? "#0F172A" : "#64748b" }}>Extend Eligibility (Widow/Divorced)</span>
+                    </div>
+                    <div onClick={() => toggleMaritalExemption(!hasMaritalExemption)} style={{ width: "32px", height: "16px", background: hasMaritalExemption ? "var(--accent-primary)" : "#cbd5e1", borderRadius: "10px", position: "relative", cursor: "pointer", transition: "background 0.2s" }}>
+                      <motion.div animate={{ x: hasMaritalExemption ? 18 : 2 }} style={{ width: "12px", height: "12px", background: "white", borderRadius: "50%", position: "absolute", top: "2px" }} />
+                    </div>
                   </div>
-                  <p
-                    style={{
-                      fontSize: "0.6rem",
-                      color: "var(--text-tertiary)",
-                      fontWeight: 600,
-                      marginTop: "2px",
-                    }}
-                  >
-                    Enable Soft-Warning Caution
-                  </p>
+                  <AnimatePresence>
+                    {hasMaritalExemption && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: "hidden", background: "var(--bg-app-subtle)", margin: "0 1.25rem 1rem 1.25rem", borderRadius: "12px", border: "1px solid var(--border-subtle)" }}>
+                        <div style={{ padding: "1rem" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                              <p style={{ fontSize: "0.6rem", color: "#475569", fontWeight: 700, margin: 0 }}>Widows & Divorced/Separated women.</p>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px", background: "white", padding: "6px 16px", borderRadius: "8px", border: "1.5px solid var(--border-subtle)", boxShadow: "0 2px 4px rgba(0,0,0,0.02)" }}>
+                              <input type="number" style={{ width: "45px", background: "transparent", border: "none", fontSize: "0.95rem", fontWeight: 800, padding: 0, textAlign: "right", color: "var(--accent-primary)", outline: "none" }} value={activeExam.marital_grace_period ?? 5} onChange={(e) => updateExamData((p) => ({ ...p, marital_grace_period: Number(e.target.value) }))} />
+                              <span style={{ fontSize: "0.55rem", fontWeight: 900, color: "var(--accent-primary)", opacity: 0.7 }}>YRS</span>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <div
-                  onClick={() =>
-                    updateExamData((p) => ({
-                      ...p,
-                      show_govt_caution: !p.show_govt_caution,
-                    }))
-                  }
-                  style={{
-                    width: "24px",
-                    height: "12px",
-                    background: activeExam.show_govt_caution
-                      ? "var(--accent-institutional)"
-                      : "rgba(0,0,0,0.1)",
-                    borderRadius: "10px",
-                    position: "relative",
-                    cursor: "pointer",
-                  }}
-                >
-                  <motion.div
-                    animate={{ x: activeExam.show_govt_caution ? 14 : 2 }}
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      background: "white",
-                      borderRadius: "50%",
-                      position: "absolute",
-                      top: "2px",
-                    }}
-                  />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Compact Institutional Rules */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="premium-glass"
-              style={{ flex: 1 }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                <div className="label-premium" style={{ margin: 0 }}>
-                  Marital Institutional Ruling
-                </div>
-                <div
-                  onClick={() =>
-                    updateExamData((p) => ({
-                      ...p,
-                      has_marital_restriction: !p.has_marital_restriction,
-                    }))
-                  }
-                  style={{
-                    width: "24px",
-                    height: "12px",
-                    background: activeExam.has_marital_restriction
-                      ? "var(--accent-primary)"
-                      : "rgba(0,0,0,0.1)",
-                    borderRadius: "10px",
-                    position: "relative",
-                    cursor: "pointer",
-                  }}
-                >
-                  <motion.div
-                    animate={{ x: activeExam.has_marital_restriction ? 14 : 2 }}
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      background: "white",
-                      borderRadius: "50%",
-                      position: "absolute",
-                      top: "2px",
-                    }}
-                  />
-                </div>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {["Unmarried", "Married", "Widow"].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => toggleMaritalStatus(s)}
-                    style={{
-                      fontSize: "0.6rem",
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      border: "1px solid var(--border-subtle)",
-                      background: activeExam.allowed_marital_statuses?.includes(
-                        s,
-                      )
-                        ? "var(--accent-primary)"
-                        : activeExam.has_marital_restriction
-                          ? "white"
-                          : "var(--bg-app-subtle)",
-                      color: activeExam.allowed_marital_statuses?.includes(s)
-                        ? "white"
-                        : "var(--text-secondary)",
-                      fontWeight: 700,
-                      pointerEvents: activeExam.has_marital_restriction
-                        ? "auto"
-                        : "none",
-                      opacity: activeExam.has_marital_restriction ? 1 : 0.4,
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
               </div>
             </motion.div>
           </div>
@@ -3493,129 +3011,9 @@ export default function AdminDashboard() {
                 <option value="0.20">1/5 (-0.20)</option>
               </select>
             </div>
-            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_qs || ""} readOnly={activeExam.exam_pattern?.stage1_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage1_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage1_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_qs: Number(e.target.value) } }))} /></div>
+            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_qs || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_qs: Number(e.target.value) } }))} /></div>
             <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Marks</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_marks || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_marks: Number(e.target.value) } }))} /></div>
-            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_duration || ""} readOnly={activeExam.exam_pattern?.stage1_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage1_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage1_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_duration: Number(e.target.value) } }))} /></div>
-          </div>
-
-          {/* New: Stage 1 Sectional Breakdown */}
-          <div style={{ 
-            marginTop: "1.25rem", 
-            padding: "1rem", 
-            background: activeExam.exam_pattern?.stage1_sectional_enabled ? "var(--accent-primary-bg)" : "var(--bg-app-subtle)", 
-            borderRadius: "16px",
-            border: activeExam.exam_pattern?.stage1_sectional_enabled ? "1px dashed var(--accent-primary-subtle)" : "1px solid var(--border-subtle)",
-            transition: "all 0.3s ease"
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Layout style={{ color: "var(--accent-primary)" }} size={14} />
-                <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>Sectional Breakup (Sequential)</span>
-              </div>
-              <div
-                onClick={() =>
-                  updateExamData((p) => ({
-                    ...p,
-                    exam_pattern: { ...p.exam_pattern, stage1_sectional_enabled: !p.exam_pattern?.stage1_sectional_enabled }
-                  }))
-                }
-                style={{
-                  width: "28px",
-                  height: "14px",
-                  background: activeExam.exam_pattern?.stage1_sectional_enabled
-                    ? "var(--accent-primary)"
-                    : "rgba(0,0,0,0.1)",
-                  borderRadius: "10px",
-                  position: "relative",
-                  cursor: "pointer",
-                }}
-              >
-                <motion.div
-                  animate={{ x: activeExam.exam_pattern?.stage1_sectional_enabled ? 16 : 2 }}
-                  style={{
-                    width: "10px",
-                    height: "10px",
-                    background: "white",
-                    borderRadius: "50%",
-                    position: "absolute",
-                    top: "2px",
-                  }}
-                />
-              </div>
-            </div>
-
-            {activeExam.exam_pattern?.stage1_sectional_enabled && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
-                <div>
-                  <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block", marginBottom: "4px" }}>No. of Sections</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    style={{ fontSize: "0.8rem", padding: "6px" }}
-                    placeholder="e.g. 5"
-                    value={activeExam.exam_pattern?.stage1_sections_count || ""}
-                    onChange={e => {
-                      const count = Number(e.target.value);
-                      const qps = activeExam.exam_pattern?.stage1_q_per_section || 0;
-                      const dps = activeExam.exam_pattern?.stage1_d_per_section || 0;
-                      updateExamData(p => ({ 
-                        ...p, 
-                        exam_pattern: { 
-                          ...p.exam_pattern, 
-                          stage1_sections_count: count,
-                          stage1_qs: count * qps,
-                          stage1_duration: count * dps
-                        } 
-                      }));
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block", marginBottom: "4px" }}>Qs per Section</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    style={{ fontSize: "0.8rem", padding: "6px" }}
-                    placeholder="e.g. 20"
-                    value={activeExam.exam_pattern?.stage1_q_per_section || ""}
-                    onChange={e => {
-                      const qps = Number(e.target.value);
-                      const count = activeExam.exam_pattern?.stage1_sections_count || 0;
-                      updateExamData(p => ({ 
-                        ...p, 
-                        exam_pattern: { 
-                          ...p.exam_pattern, 
-                          stage1_q_per_section: qps,
-                          stage1_qs: count * qps
-                        } 
-                      }));
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block", marginBottom: "4px" }}>Time / Section (m)</label>
-                  <input 
-                    type="number" 
-                    className="form-input" 
-                    style={{ fontSize: "0.8rem", padding: "6px" }}
-                    placeholder="e.g. 18"
-                    value={activeExam.exam_pattern?.stage1_d_per_section || ""}
-                    onChange={e => {
-                      const dps = Number(e.target.value);
-                      const count = activeExam.exam_pattern?.stage1_sections_count || 0;
-                      updateExamData(p => ({ 
-                        ...p, 
-                        exam_pattern: { 
-                          ...p.exam_pattern, 
-                          stage1_d_per_section: dps,
-                          stage1_duration: count * dps
-                        } 
-                      }));
-                    }}
-                  />
-                </div>
-              </div>
-            )}
+            <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage1_duration || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage1_duration: Number(e.target.value) } }))} /></div>
           </div>
 
           <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border-subtle)" }}>
@@ -3670,129 +3068,9 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               )}
-              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_qs || ""} readOnly={activeExam.exam_pattern?.stage2_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage2_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage2_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_qs: Number(e.target.value) } }))} /></div>
+              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Questions</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_qs || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_qs: Number(e.target.value) } }))} /></div>
               <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Total Marks</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_marks || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_marks: Number(e.target.value) } }))} /></div>
-              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_duration || ""} readOnly={activeExam.exam_pattern?.stage2_sectional_enabled} style={{ opacity: activeExam.exam_pattern?.stage2_sectional_enabled ? 0.6 : 1, background: activeExam.exam_pattern?.stage2_sectional_enabled ? 'var(--bg-app-subtle)' : 'white' }} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_duration: Number(e.target.value) } }))} /></div>
-            </div>
-
-            {/* New: Stage 2 Sectional Breakdown */}
-            <div style={{ 
-              marginTop: "1.25rem", 
-              padding: "1rem", 
-              background: activeExam.exam_pattern?.stage2_sectional_enabled ? "rgba(79, 70, 229, 0.05)" : "rgba(0,0,0,0.02)", 
-              borderRadius: "16px",
-              border: activeExam.exam_pattern?.stage2_sectional_enabled ? "1px dashed var(--accent-primary)" : "1px solid rgba(0,0,0,0.05)",
-              transition: "all 0.3s ease"
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Layout style={{ color: "var(--accent-primary)" }} size={14} />
-                  <span style={{ fontSize: "0.7rem", fontWeight: 900, textTransform: "uppercase" }}>Stage 2 Sectional Breakup</span>
-                </div>
-                <div
-                  onClick={() =>
-                    updateExamData((p) => ({
-                      ...p,
-                      exam_pattern: { ...p.exam_pattern, stage2_sectional_enabled: !p.exam_pattern?.stage2_sectional_enabled }
-                    }))
-                  }
-                  style={{
-                    width: "28px",
-                    height: "14px",
-                    background: activeExam.exam_pattern?.stage2_sectional_enabled
-                      ? "var(--accent-primary)"
-                      : "rgba(0,0,0,0.1)",
-                    borderRadius: "10px",
-                    position: "relative",
-                    cursor: "pointer",
-                  }}
-                >
-                  <motion.div
-                    animate={{ x: activeExam.exam_pattern?.stage2_sectional_enabled ? 16 : 2 }}
-                    style={{
-                      width: "10px",
-                      height: "10px",
-                      background: "white",
-                      borderRadius: "50%",
-                      position: "absolute",
-                      top: "2px",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {activeExam.exam_pattern?.stage2_sectional_enabled && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
-                  <div>
-                    <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block", marginBottom: "4px" }}>No. of Sections</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      style={{ fontSize: "0.8rem", padding: "6px" }}
-                      placeholder="e.g. 4"
-                      value={activeExam.exam_pattern?.stage2_sections_count || ""}
-                      onChange={e => {
-                        const count = Number(e.target.value);
-                        const qps = activeExam.exam_pattern?.stage2_q_per_section || 0;
-                        const dps = activeExam.exam_pattern?.stage2_d_per_section || 0;
-                        updateExamData(p => ({ 
-                          ...p, 
-                          exam_pattern: { 
-                            ...p.exam_pattern, 
-                            stage2_sections_count: count,
-                            stage2_qs: count * qps,
-                            stage2_duration: count * dps
-                          } 
-                        }));
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block", marginBottom: "4px" }}>Qs per Section</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      style={{ fontSize: "0.8rem", padding: "6px" }}
-                      placeholder="e.g. 40"
-                      value={activeExam.exam_pattern?.stage2_q_per_section || ""}
-                      onChange={e => {
-                        const qps = Number(e.target.value);
-                        const count = activeExam.exam_pattern?.stage2_sections_count || 0;
-                        updateExamData(p => ({ 
-                          ...p, 
-                          exam_pattern: { 
-                            ...p.exam_pattern, 
-                            stage2_q_per_section: qps,
-                            stage2_qs: count * qps
-                          } 
-                        }));
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "var(--text-tertiary)", display: "block", marginBottom: "4px" }}>Time / Section (m)</label>
-                    <input 
-                      type="number" 
-                      className="form-input" 
-                      style={{ fontSize: "0.8rem", padding: "6px" }}
-                      placeholder="e.g. 45"
-                      value={activeExam.exam_pattern?.stage2_d_per_section || ""}
-                      onChange={e => {
-                        const dps = Number(e.target.value);
-                        const count = activeExam.exam_pattern?.stage2_sections_count || 0;
-                        updateExamData(p => ({ 
-                          ...p, 
-                          exam_pattern: { 
-                            ...p.exam_pattern, 
-                            stage2_d_per_section: dps,
-                            stage2_duration: count * dps
-                          } 
-                        }));
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+              <div><label className="form-label" style={{ fontSize: "0.7rem" }}>Duration (Mins)</label><input type="number" className="form-input" value={activeExam.exam_pattern?.stage2_duration || ""} onChange={e => updateExamData(p => ({ ...p, exam_pattern: { ...p.exam_pattern, stage2_duration: Number(e.target.value) } }))} /></div>
             </div>
           </div>
         )}
@@ -3800,99 +3078,304 @@ export default function AdminDashboard() {
     );
   };
 
+
   const renderSyllabusSplit = () => {
-    const corePercent = activeExam.syllabus?.core_percentage || 50;
+    const corePercent = activeExam.syllabus?.core_percentage || 80;
     const nonCorePercent = activeExam.syllabus?.non_core_percentage ?? (100 - corePercent);
     
     return (
       <div className="animate-in">
         {renderSectionHeader(
-          "Exam Syllabus",
-          "Define the ratio between core nursing science and general aptitude.",
+          "Notification Syllabus Mapping",
+          "Map the distribution between Nursing and Non-Nursing subjects as per official notification.",
           BookOpen
         )}
-        <div className="premium-glass" style={{ padding: "1.5rem", borderRadius: "24px", border: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
-          <label className="label-premium" style={{ fontSize: "0.75rem", fontWeight: 800, marginBottom: "1rem", display: "block" }}>MASTER SPLIT</label>
-          
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
-            <div style={{ background: "rgba(0,0,0,0.02)", padding: "1.25rem", borderRadius: "20px", border: "none" }}>
-              <label className="label-premium" style={{ fontSize: "0.75rem", margin: 0, color: "var(--text-primary)" }}>Nursing Syllabus (%)</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
-                <input 
-                  type="number" 
-                  className="form-input" 
-                  value={corePercent} 
-                  onChange={e => updateExamData(p => ({ 
-                    ...p, 
-                    syllabus: { 
-                      ...p.syllabus, 
-                      core_percentage: Number(e.target.value),
-                      non_core_percentage: 100 - Number(e.target.value)
-                    } 
-                  }))} 
-                  placeholder="e.g. 50"
-                  style={{ fontSize: "1.1rem", fontWeight: 800, padding: "0.75rem" }}
-                />
-              </div>
-            </div>
 
-            <div style={{ background: "rgba(0,0,0,0.02)", padding: "1.25rem", borderRadius: "20px", border: "none" }}>
-              <label className="label-premium" style={{ fontSize: "0.75rem", margin: 0, color: "var(--text-primary)" }}>Non-Nursing Aptitude (%)</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
-                <input 
-                  type="number" 
-                  className="form-input" 
-                  value={nonCorePercent} 
-                  onChange={e => updateExamData(p => ({ 
-                    ...p, 
-                    syllabus: { 
-                      ...p.syllabus, 
-                      non_core_percentage: Number(e.target.value),
-                      core_percentage: 100 - Number(e.target.value)
-                    } 
-                  }))} 
-                  placeholder="e.g. 50"
-                  style={{ fontSize: "1.1rem", fontWeight: 800, padding: "0.75rem" }}
-                />
-              </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "2rem" }}>
+          {/* 1. The High-Performance Balance Bar */}
+          <div style={{ background: "white", padding: "1.5rem", borderRadius: "24px", border: "1px solid var(--border-subtle)", boxShadow: "var(--shadow-sm)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+               <h4 style={{ fontSize: "0.75rem", fontWeight: 900, textTransform: "uppercase", letterSpacing: "1px" }}>Domain Distribution Matrix</h4>
+               <div style={{ display: "flex", gap: "12px", fontSize: "0.75rem", fontWeight: 800 }}>
+                 <span style={{ color: "var(--accent-primary)" }}>{corePercent}% Nursing</span>
+                 <span style={{ color: "var(--text-tertiary)" }}>|</span>
+                 <span style={{ color: "#8b5cf6" }}>{nonCorePercent}% Non-Nursing</span>
+               </div>
+            </div>
+            
+            <div style={{ height: "40px", width: "100%", background: "var(--bg-app-subtle)", borderRadius: "12px", overflow: "hidden", display: "flex", border: "1px solid var(--border-subtle)" }}>
+              <motion.div 
+                 animate={{ width: `${corePercent}%` }}
+                 style={{ height: "100%", background: "var(--accent-primary)", display: "flex", alignItems: "center", paddingLeft: "1rem", color: "white", fontSize: "0.7rem", fontWeight: 800 }}
+              >
+                Nursing Domain
+              </motion.div>
+              <motion.div 
+                 animate={{ width: `${nonCorePercent}%` }}
+                 style={{ height: "100%", background: "#8b5cf6", display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: "1rem", color: "white", fontSize: "0.7rem", fontWeight: 800 }}
+              >
+                Non-Nursing
+              </motion.div>
             </div>
           </div>
 
-          {nonCorePercent > 0 && (
-            <div className="premium-glass" style={{ padding: "1.5rem", borderRadius: "20px", border: "1px solid rgba(0,0,0,0.03)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-                <div>
-                  <h5 style={{ fontSize: "0.85rem", fontWeight: 800 }}>Non-Nursing Subject Breakdown</h5>
-                  <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)" }}>Divide the aptitude portion into specific subjects.</p>
-                </div>
-                <button className="btn btn-primary" style={{ fontSize: "0.7rem", padding: "6px 12px", borderRadius: "8px" }} onClick={() => updateExamData(p => ({ ...p, syllabus: { ...p.syllabus, non_core_subjects: [...(p.syllabus?.non_core_subjects || []), { name: "" }] } }))}>
-                  + Add Subject
-                </button>
-              </div>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {(activeExam.syllabus?.non_core_subjects || []).map((sub, idx) => (
-                  <div key={idx} style={{ display: "flex", gap: "1rem", alignItems: "center", background: "white", padding: "12px 20px", borderRadius: "16px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-                    <input type="text" className="form-input" style={{ flex: 1, background: "transparent", border: "none", boxShadow: "none", padding: "0", fontWeight: 700 }} placeholder="Subject Name e.g. General Knowledge" value={sub.name} onChange={e => {
-                      const newSubs = [...activeExam.syllabus.non_core_subjects];
-                      newSubs[idx].name = e.target.value;
-                      updateExamData(p => ({...p, syllabus: {...p.syllabus, non_core_subjects: newSubs}}));
-                    }}/>
-                    <button className="btn icon-btn" style={{ color: "var(--accent-warning)", background: "var(--accent-warning-bg)", width: "32px", height: "32px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => updateExamData(p => ({...p, syllabus: {...p.syllabus, non_core_subjects: p.syllabus.non_core_subjects.filter((_, i) => i !== idx)}}))}><Trash2 size={16}/></button>
-                  </div>
-                ))}
-                {(!activeExam.syllabus?.non_core_subjects || activeExam.syllabus?.non_core_subjects.length === 0) && (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-tertiary)", fontSize: "0.8rem", fontWeight: 600 }}>
-                    No subjects added yet. Click "+ Add Subject" to begin.
-                  </div>
-                )}
-              </div>
+          {/* 2. Integrated Builder Workspace */}
+          <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: "1.5rem" }}>
+            {/* Left Side: Percents */}
+            <div style={{ background: "white", padding: "1.5rem", borderRadius: "24px", border: "1px solid var(--border-subtle)" }}>
+               <div style={{ marginBottom: "1.5rem" }}>
+                  <label className="form-label" style={{ fontSize: "0.65rem", fontWeight: 900 }}>Nursing Weightage (%)</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    value={corePercent} 
+                    onChange={e => updateExamData(p => ({ 
+                      ...p, 
+                      syllabus: { ...p.syllabus, core_percentage: Number(e.target.value), non_core_percentage: 100 - Number(e.target.value) } 
+                    }))} 
+                    style={{ fontSize: "1.2rem", fontWeight: 800, padding: "0.75rem", background: "var(--bg-app-subtle)", border: "none" }}
+                  />
+               </div>
+               <div>
+                  <label className="form-label" style={{ fontSize: "0.65rem", fontWeight: 900 }}>Non-Nursing Weightage (%)</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    value={nonCorePercent} 
+                    onChange={e => updateExamData(p => ({ 
+                      ...p, 
+                      syllabus: { ...p.syllabus, non_core_percentage: Number(e.target.value), core_percentage: 100 - Number(e.target.value) } 
+                    }))} 
+                    style={{ fontSize: "1.2rem", fontWeight: 800, padding: "0.75rem", background: "var(--bg-app-subtle)", border: "none" }}
+                  />
+               </div>
             </div>
-          )}
+
+          {/* Right Side: Builder */}
+          <div style={{ background: "white", padding: "1.5rem", borderRadius: "24px", border: "1px solid var(--border-subtle)", minHeight: "300px", display: "flex", flexDirection: "column" }}>
+             <h3 style={{ fontSize: "0.85rem", fontWeight: 900, marginBottom: "1.5rem" }}>Non-Nursing Subject Profiler</h3>
+             
+             <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.5rem" }}>
+                  {(activeExam.syllabus?.non_core_subjects || []).map((sub, idx) => (
+                    <motion.div 
+                      key={idx}
+                      layout
+                      style={{ 
+                        background: "rgba(139, 92, 246, 0.1)", 
+                        color: "#6d28d9", 
+                        padding: "8px 16px", 
+                        borderRadius: "12px", 
+                        fontSize: "0.8rem", 
+                        fontWeight: 700, 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: "8px", 
+                        border: "1px solid rgba(139, 92, 246, 0.2)",
+                        boxShadow: "0 4px 12px rgba(139, 92, 246, 0.05)"
+                      }}
+                    >
+                      {sub.name}
+                      <button 
+                        onClick={() => updateExamData(p => ({...p, syllabus: {...p.syllabus, non_core_subjects: p.syllabus.non_core_subjects.filter((_, i) => i !== idx)}}))}
+                        style={{ background: "transparent", border: "none", color: "#6d28d9", cursor: "pointer", display: "flex", alignItems: "center" }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </motion.div>
+                  ))}
+                  <div style={{ display: "flex", alignItems: "center", background: "var(--bg-app-subtle)", padding: "6px 14px", borderRadius: "12px", border: "1px dashed var(--border-strong)" }}>
+                     <input 
+                        type="text" 
+                        placeholder="Add subject..."
+                        value={draftSubject}
+                        onChange={e => setDraftSubject(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter" && draftSubject.trim()) {
+                            updateExamData(p => ({ ...p, syllabus: { ...p.syllabus, non_core_subjects: [...(p.syllabus?.non_core_subjects || []), { name: draftSubject.trim() }] } }));
+                            setDraftSubject("");
+                          }
+                        }}
+                        style={{ background: "transparent", border: "none", outline: "none", fontSize: "0.8rem", fontWeight: 700, width: "120px" }}
+                     />
+                     <Plus size={14} color="var(--text-tertiary)" />
+                  </div>
+                </div>
+             </div>
+
+             <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "1.25rem" }}>
+                <p style={{ fontSize: "0.65rem", fontWeight: 900, color: "var(--text-tertiary)", marginBottom: "1rem", textTransform: "uppercase" }}>Non-Nursing Subject Presets</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                    {["General Knowledge", "English", "Aptitude", "Math", "PC Science", "Reasoning"].map(preset => (
+                      <button 
+                        key={preset}
+                        onClick={() => {
+                           const exists = (activeExam.syllabus?.non_core_subjects || []).some(s => s.name === preset);
+                           if (!exists) updateExamData(p => ({ ...p, syllabus: { ...p.syllabus, non_core_subjects: [...(p.syllabus?.non_core_subjects || []), { name: preset }] } }));
+                        }}
+                        style={{ padding: "8px 16px", borderRadius: "10px", background: "var(--bg-app-subtle)", border: "1px solid var(--border-subtle)", fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", cursor: "pointer" }}
+                      >
+                        + {preset}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   };
+
+
+  const renderFeeStructureModern = (categories, getFee, getWaived, setFee, setWaived) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+      {/* Policy Card */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="premium-glass"
+        style={{ 
+          padding: "1.5rem 2rem", 
+          background: activeExam.fee_matrix?.enforce_domicile_wall ? "linear-gradient(135deg, #fffbeb 0%, #fff7ed 100%)" : "white",
+          border: activeExam.fee_matrix?.enforce_domicile_wall ? "1.5px solid #fbbf24" : "1px solid var(--border-subtle)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}
+      >
+        <div style={{ display: "flex", gap: "1.25rem", alignItems: "center" }}>
+          <div style={{ 
+            width: "48px", 
+            height: "48px", 
+            borderRadius: "14px", 
+            background: activeExam.fee_matrix?.enforce_domicile_wall ? "#fef3c7" : "var(--bg-app-subtle)", 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            color: activeExam.fee_matrix?.enforce_domicile_wall ? "#d97706" : "var(--text-tertiary)"
+          }}>
+            <Shield size={22} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: "0.95rem", fontWeight: 900, color: "var(--text-primary)" }}>Domicile Fee Restriction</h4>
+            <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", maxWidth: "450px" }}>Force out-of-state applicants to pay the Unreserved (UR) rate regardless of category.</p>
+          </div>
+        </div>
+        
+        <div 
+          onClick={() => updateExamData(p => ({ ...p, fee_matrix: { ...p.fee_matrix, enforce_domicile_wall: !p.fee_matrix?.enforce_domicile_wall } }))}
+          style={{ 
+            width: "44px", 
+            height: "24px", 
+            borderRadius: "20px", 
+            background: activeExam.fee_matrix?.enforce_domicile_wall ? "var(--accent-warning)" : "var(--text-tertiary)", 
+            position: "relative",
+            cursor: "pointer",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            opacity: activeExam.fee_matrix?.enforce_domicile_wall ? 1 : 0.4
+          }}
+        >
+          <motion.div 
+            animate={{ x: activeExam.fee_matrix?.enforce_domicile_wall ? 22 : 2 }}
+            style={{ 
+              width: "20px", 
+              height: "20px", 
+              borderRadius: "50%", 
+              background: "white", 
+              position: "absolute", 
+              top: "2px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+            }} 
+          />
+        </div>
+      </motion.div>
+
+      {/* Modern Fee Matrix */}
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+          <h3 className="label-premium" style={{ marginBottom: 0 }}>Category-Wise Fee Matrix</h3>
+          <div style={{ fontSize: "0.65rem", color: "var(--text-tertiary)", display: "flex", gap: "10px" }}>
+             <span>Amount (INR)</span>
+             <span>Waiver Status</span>
+          </div>
+        </div>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "1rem" }}>
+          {categories.map((c, idx) => {
+            const waived = getWaived(c.id);
+            const fee = getFee(c.id);
+            return (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className="premium-glass"
+                style={{ 
+                  padding: "1.25rem 1.5rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: waived ? "var(--bg-app-subtle)" : "white",
+                  borderColor: waived ? "transparent" : "var(--border-subtle)"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                   <div style={{ 
+                     width: "32px", 
+                     height: "32px", 
+                     borderRadius: "8px", 
+                     background: waived ? "var(--accent-success-bg)" : "var(--accent-primary-bg)", 
+                     display: "flex", 
+                     alignItems: "center", 
+                     justifyContent: "center",
+                     color: waived ? "var(--accent-success)" : "var(--accent-primary)"
+                   }}>
+                     {waived ? <CheckCircle2 size={16} /> : <IndianRupee size={16} />}
+                   </div>
+                   <span style={{ fontWeight: 800, fontSize: "0.85rem", color: waived ? "var(--text-tertiary)" : "var(--text-primary)" }}>{c.label}</span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  {!waived ? (
+                    <div style={{ position: "relative" }}>
+                      <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontSize: "0.75rem", fontWeight: 700, color: "var(--text-tertiary)" }}>₹</span>
+                      <input 
+                        type="number" 
+                        value={fee} 
+                        onChange={(e) => setFee(c.id, e.target.value)}
+                        className="input-glass"
+                        style={{ width: "90px", paddingLeft: "1.75rem", height: "36px", fontSize: "0.9rem", fontWeight: 900 }}
+                        placeholder="0"
+                      />
+                    </div>
+                  ) : (
+                    <span className="badge-caution" style={{ background: "var(--accent-success-bg)", color: "var(--accent-success)", borderColor: "transparent", fontSize: "0.6rem" }}>WAIVED</span>
+                  )}
+
+                  <button 
+                    onClick={() => setWaived(c.id, !waived)}
+                    className="action-pellet"
+                    style={{ 
+                      padding: "6px", 
+                      borderRadius: "8px", 
+                      background: waived ? "var(--accent-success)" : "transparent",
+                      color: waived ? "white" : "var(--text-tertiary)",
+                      border: waived ? "none" : "1px solid var(--border-subtle)"
+                    }}
+                    title={waived ? "Remove Exemption" : "Apply Fee Waiver"}
+                  >
+                    <Plus size={14} style={{ transform: waived ? "rotate(45deg)" : "none" }} />
+                  </button>
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  );
 
   const renderFeeStructure = () => {
     const categories = [
@@ -3913,60 +3396,74 @@ export default function AdminDashboard() {
 
     return (
       <div className="animate-in">
-        {renderSectionHeader(
-          "Exam Fees",
-          "Set exact financial burdens or waivers per category. Overrides apply chronologically.",
-          IndianRupee
-        )}
-        
-        <label style={{ display: "flex", alignItems: "center", gap: "10px", background: "var(--accent-warning-bg)", padding: "16px", borderRadius: "16px", cursor: "pointer", border: "1px solid var(--accent-warning)", marginBottom: "2rem" }}>
-          <input type="checkbox" checked={activeExam.fee_matrix?.enforce_domicile_wall || false} onChange={(e) => updateExamData(p => ({ ...p, fee_matrix: { ...p.fee_matrix, enforce_domicile_wall: e.target.checked } }))} style={{ width: "20px", height: "20px" }}/>
-          <div>
-            <div style={{ fontSize: "0.85rem", fontWeight: 900, color: "var(--accent-warning)" }}>Force full UR fee for ALL Out-of-State Candidates</div>
-            <div style={{ fontSize: "0.7rem", opacity: 0.8 }}>Ignores reserve status if candidate applies across borders (MP/UP Rule).</div>
-          </div>
-        </label>
-
-        <div className="premium-glass" style={{ borderRadius: "24px", border: "none", overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "16px 20px", background: "rgba(0,0,0,0.02)", borderBottom: "1px solid rgba(0,0,0,0.05)", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", color: "var(--text-tertiary)" }}>
-            <div>Applicant Category</div>
-            <div>Fee Amount (₹)</div>
-            <div>Total Exemption</div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {categories.map((c, i) => (
-              <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "20px", borderBottom: i === categories.length - 1 ? "none" : "1px solid rgba(0,0,0,0.04)", alignItems: "center" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.85rem" }}>{c.label}</div>
-                <div>
-                  <input type="number" className="form-input" style={{ width: "100px", fontSize: "1rem", fontWeight: 800, background: getWaived(c.id) ? "var(--bg-app)" : "white" }} placeholder="0" disabled={getWaived(c.id)} value={getFee(c.id)} onChange={(e) => setFee(c.id, e.target.value)} />
-                </div>
-                <div>
-                  <div 
-                    onClick={() => setWaived(c.id, !getWaived(c.id))}
-                    style={{ 
-                      display: "flex", alignItems: "center", gap: "10px", cursor: "pointer",
-                      opacity: getWaived(c.id) ? 1 : 0.6
-                    }}
-                  >
-                    <div style={{ 
-                      width: "32px", height: "18px", borderRadius: "12px", 
-                      background: getWaived(c.id) ? "var(--accent-primary)" : "var(--text-tertiary)", 
-                      position: "relative", transition: "all 0.3s"
-                    }}>
-                      <div style={{ 
-                        width: "14px", height: "14px", borderRadius: "50%", background: "white", 
-                        position: "absolute", top: "2px", 
-                        left: getWaived(c.id) ? "16px" : "2px", transition: "all 0.3s",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
-                      }}/>
-                    </div>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: getWaived(c.id) ? "var(--accent-primary)" : "var(--text-tertiary)" }}>Waived</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+          {renderSectionHeader(
+            "Candidate Application Fees",
+            "Specify the application fee and waiver rules for each candidate category.",
+            IndianRupee
+          )}
+          
+          {/* Dual View Toggle */}
+          <div style={{ background: "var(--bg-app-subtle)", padding: "4px", borderRadius: "12px", border: "1px solid var(--border-subtle)", display: "flex", gap: "4px" }}>
+            <button 
+              onClick={() => setFeeViewMode("standard")}
+              style={{ 
+                padding: "6px 14px", 
+                fontSize: "0.7rem", 
+                borderRadius: "8px", 
+                background: feeViewMode === "standard" ? "white" : "transparent",
+                color: feeViewMode === "standard" ? "var(--accent-primary)" : "var(--text-tertiary)",
+                boxShadow: feeViewMode === "standard" ? "var(--shadow-sm)" : "none",
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+                height: "32px",
+                border: "none",
+                transition: "all 0.2s"
+              }}
+            >
+              <Layers size={14} /> Standard
+            </button>
+            <button 
+              onClick={() => setFeeViewMode("modern")}
+              style={{ 
+                padding: "6px 14px", 
+                fontSize: "0.7rem", 
+                borderRadius: "8px", 
+                background: feeViewMode === "modern" ? "white" : "transparent",
+                color: feeViewMode === "modern" ? "var(--accent-primary)" : "var(--text-tertiary)",
+                boxShadow: feeViewMode === "modern" ? "var(--shadow-sm)" : "none",
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+                height: "32px",
+                border: "none",
+                transition: "all 0.2s"
+              }}
+            >
+              <Grid size={14} /> Modern
+            </button>
           </div>
         </div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={feeViewMode}
+            initial={{ opacity: 0, x: feeViewMode === 'modern' ? 10 : -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: feeViewMode === 'modern' ? -10 : 10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {feeViewMode === "modern" 
+              ? renderFeeStructureModern(categories, getFee, getWaived, setFee, setWaived) 
+              : renderFeeStructureStandard(categories, getFee, getWaived, setFee, setWaived)
+            }
+          </motion.div>
+        </AnimatePresence>
       </div>
     );
   };
@@ -4063,12 +3560,12 @@ export default function AdminDashboard() {
   const sections = [
     { id: "identity", label: "Recruitment Details", icon: LayoutGrid },
     { id: "job_type", label: "Job Domicile & Language", icon: Briefcase },
-    { id: "dates", label: "Timeline", icon: Clock },
+    { id: "dates", label: "Important Date", icon: Clock },
     { id: "age", label: "Age Limits", icon: Users },
     { id: "edu", label: "Education", icon: GraduationCap },
     { id: "marking", label: "Exam Pattern", icon: FileText },
     { id: "syllabus", label: "Exam Syllabus", icon: BookOpen },
-    { id: "fees", label: "Exam Fees", icon: IndianRupee },
+    { id: "fees", label: "Application Fees", icon: IndianRupee },
   ];
 
   return (
@@ -4077,6 +3574,7 @@ export default function AdminDashboard() {
       style={{
         display: "flex",
         height: "100vh",
+        overflow: "hidden",
         background: "var(--bg-arctic-slate)",
       }}
     >
@@ -4275,10 +3773,6 @@ export default function AdminDashboard() {
         {activeSection === "edu" && renderEducation()}
         {activeSection === "marking" && renderMarkingScheme()}
         {activeSection === "syllabus" && renderSyllabusSplit()}
-        {activeSection === "fees" && renderFeeStructure()}
-        {showGlobalPreview && renderLiveStudentCardHUD()}
-        {renderEducationRuleDrawer()}
-
         {activeSection === "fees" && renderFeeStructure()}
         {showGlobalPreview && renderLiveStudentCardHUD()}
         {renderEducationRuleDrawer()}

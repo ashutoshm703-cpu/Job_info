@@ -411,6 +411,53 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleUpdateFeeCategory = (id, field, value) => {
+    updateExamData((prev) => {
+      const matrix = prev.fee_matrix || { categories: [] };
+      const categories = [...(matrix.categories || [])];
+      const index = categories.findIndex((c) => c.id === id);
+      if (index !== -1) {
+        categories[index] = { ...categories[index], [field]: value };
+        // If set to waived, clear the amount
+        if (field === "waived" && value === true) {
+          categories[index].amount = "";
+        }
+      }
+      return { ...prev, fee_matrix: { ...matrix, categories } };
+    });
+  };
+
+  const handleAddFeeCategory = () => {
+    updateExamData((prev) => {
+      const matrix = prev.fee_matrix || { categories: [] };
+      const newCategory = {
+        id: `custom-${Date.now()}`,
+        label: "New Category",
+        amount: 0,
+        waived: false,
+        active: true,
+        is_custom: true,
+      };
+      return {
+        ...prev,
+        fee_matrix: {
+          ...matrix,
+          categories: [...(matrix.categories || []), newCategory],
+        },
+      };
+    });
+  };
+
+  const handleRemoveFeeCategory = (id) => {
+    updateExamData((prev) => ({
+      ...prev,
+      fee_matrix: {
+        ...prev.fee_matrix,
+        categories: (prev.fee_matrix.categories || []).filter((c) => c.id !== id),
+      },
+    }));
+  };
+
   const calculatePreviewAge = (dob, cutoff) => {
     if (!dob || !cutoff) return null;
     const b = new Date(dob),
@@ -3928,78 +3975,186 @@ export default function AdminDashboard() {
   };
 
   const renderFeeStructure = () => {
-    const categories = [
-      { id: "UR", label: "Unreserved (UR)" },
-      { id: "OBC", label: "OBC" },
-      { id: "EWS", label: "EWS" },
-      { id: "SC_ST", label: "SC / ST" },
-      { id: "Women", label: "Women (All Cats)" },
-      { id: "PwBD", label: "PwBD (Disability)" },
-      { id: "ESM", label: "Ex-Servicemen" }
-    ];
+    // ------------------------------------------------------------------
+    // AUTO-MIGRATION: Detect old format and migrate to dynamic array
+    // ------------------------------------------------------------------
+    if (activeExam && (!activeExam.fee_matrix || !activeExam.fee_matrix.categories)) {
+      const defaultCats = [
+        { id: "UR", label: "Unreserved (UR)" },
+        { id: "OBC", label: "OBC" },
+        { id: "EWS", label: "EWS" },
+        { id: "SC_ST", label: "SC / ST" },
+        { id: "Women", label: "Women (All Cats)" },
+        { id: "PwBD", label: "PwBD (Disability)" },
+        { id: "ESM", label: "Ex-Servicemen" }
+      ];
 
-    const getFee = (id) => activeExam.fee_matrix?.[id]?.amount ?? "";
-    const getWaived = (id) => activeExam.fee_matrix?.[id]?.waived ?? false;
-    
-    const setFee = (id, amount) => updateExamData(p => ({ ...p, fee_matrix: { ...p.fee_matrix, [id]: { ...p.fee_matrix?.[id], amount: Number(amount), waived: false } } }));
-    const setWaived = (id, waived) => updateExamData(p => ({ ...p, fee_matrix: { ...p.fee_matrix, [id]: { ...p.fee_matrix?.[id], amount: "", waived } } }));
+      const migratedCategories = defaultCats.map(cat => ({
+        ...cat,
+        amount: activeExam.fee_matrix?.[cat.id]?.amount ?? 0,
+        waived: activeExam.fee_matrix?.[cat.id]?.waived ?? false,
+        active: true, // Keep standard ones active by default
+        is_custom: false
+      }));
+
+      // Flush migration to state
+      updateExamData(p => ({
+        ...p,
+        fee_matrix: {
+          ...p.fee_matrix,
+          categories: migratedCategories
+        }
+      }));
+      return null; // Force re-render with new structure
+    }
+
+    const categories = activeExam.fee_matrix.categories || [];
 
     return (
       <div className="animate-in">
         {renderSectionHeader(
           "Exam Fees",
-          "Set exact financial burdens or waivers per category. Overrides apply chronologically.",
+          "Set exact financial burdens or waivers per category. Add custom rows for state-specific pools.",
           IndianRupee
         )}
         
         <label style={{ display: "flex", alignItems: "center", gap: "10px", background: "var(--accent-warning-bg)", padding: "16px", borderRadius: "16px", cursor: "pointer", border: "1px solid var(--accent-warning)", marginBottom: "2rem" }}>
-          <input type="checkbox" checked={activeExam.fee_matrix?.enforce_domicile_wall || false} onChange={(e) => updateExamData(p => ({ ...p, fee_matrix: { ...p.fee_matrix, enforce_domicile_wall: e.target.checked } }))} style={{ width: "20px", height: "20px" }}/>
+          <input 
+            type="checkbox" 
+            checked={activeExam.fee_matrix?.enforce_domicile_wall || false} 
+            onChange={(e) => updateExamData(p => ({ ...p, fee_matrix: { ...p.fee_matrix, enforce_domicile_wall: e.target.checked } }))} 
+            style={{ width: "20px", height: "20px" }}
+          />
           <div>
             <div style={{ fontSize: "0.85rem", fontWeight: 900, color: "var(--accent-warning)" }}>Force full UR fee for ALL Out-of-State Candidates</div>
             <div style={{ fontSize: "0.7rem", opacity: 0.8 }}>Ignores reserve status if candidate applies across borders (MP/UP Rule).</div>
           </div>
         </label>
 
-        <div className="premium-glass" style={{ borderRadius: "24px", border: "none", overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "16px 20px", background: "rgba(0,0,0,0.02)", borderBottom: "1px solid rgba(0,0,0,0.05)", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", color: "var(--text-tertiary)" }}>
-            <div>Applicant Category</div>
-            <div>Fee Amount (₹)</div>
-            <div>Total Exemption</div>
+        <div className="premium-glass" style={{ borderRadius: "24px", border: "none", overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.05)", marginBottom: "1.5rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "60px 2fr 1fr 1fr 60px", padding: "16px 20px", background: "rgba(0,0,0,0.02)", borderBottom: "1px solid rgba(0,0,0,0.05)", fontSize: "0.65rem", fontWeight: 900, textTransform: "uppercase", color: "var(--text-tertiary)" }}>
+            <div>Active</div>
+            <div>Category Name</div>
+            <div>Amount (₹)</div>
+            <div>Waiver</div>
+            <div style={{ textAlign: "center" }}>Del</div>
           </div>
+          
           <div style={{ display: "flex", flexDirection: "column" }}>
             {categories.map((c, i) => (
-              <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1fr", padding: "20px", borderBottom: i === categories.length - 1 ? "none" : "1px solid rgba(0,0,0,0.04)", alignItems: "center" }}>
-                <div style={{ fontWeight: 800, fontSize: "0.85rem" }}>{c.label}</div>
+              <div 
+                key={c.id} 
+                style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "60px 2fr 1fr 1fr 60px", 
+                  padding: "16px 20px", 
+                  borderBottom: i === categories.length - 1 ? "none" : "1px solid rgba(0,0,0,0.04)", 
+                  alignItems: "center",
+                  opacity: c.active ? 1 : 0.4,
+                  background: c.active ? "transparent" : "rgba(0,0,0,0.02)",
+                  transition: "all 0.2s"
+                }}
+              >
+                {/* 1. SELECT / DESELECT TOGGLE */}
                 <div>
-                  <input type="number" className="form-input" style={{ width: "100px", fontSize: "1rem", fontWeight: 800, background: getWaived(c.id) ? "var(--bg-app)" : "white" }} placeholder="0" disabled={getWaived(c.id)} value={getFee(c.id)} onChange={(e) => setFee(c.id, e.target.value)} />
+                   <input 
+                    type="checkbox" 
+                    checked={c.active} 
+                    onChange={(e) => handleUpdateFeeCategory(c.id, "active", e.target.checked)}
+                    style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                   />
                 </div>
+
+                {/* 2. CATEGORY LABEL (EDITABLE IF CUSTOM) */}
                 <div>
-                  <div 
-                    onClick={() => setWaived(c.id, !getWaived(c.id))}
+                  {c.is_custom ? (
+                    <input 
+                      className="form-input" 
+                      style={{ fontSize: "0.85rem", fontWeight: 800, padding: "4px 8px" }}
+                      value={c.label}
+                      onChange={(e) => handleUpdateFeeCategory(c.id, "label", e.target.value)}
+                      placeholder="Category Title"
+                    />
+                  ) : (
+                    <div style={{ fontWeight: 800, fontSize: "0.85rem" }}>{c.label}</div>
+                  )}
+                </div>
+
+                {/* 3. FEE AMOUNT */}
+                <div>
+                  <input 
+                    type="number" 
+                    className="form-input" 
                     style={{ 
-                      display: "flex", alignItems: "center", gap: "10px", cursor: "pointer",
-                      opacity: getWaived(c.id) ? 1 : 0.6
+                      width: "100px", fontSize: "1rem", fontWeight: 800, 
+                      background: (c.waived || !c.active) ? "var(--bg-app)" : "white" 
+                    }} 
+                    placeholder="0" 
+                    disabled={c.waived || !c.active} 
+                    value={c.amount} 
+                    onChange={(e) => handleUpdateFeeCategory(c.id, "amount", e.target.value)} 
+                  />
+                </div>
+
+                {/* 4. WAIVER STATUS */}
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                   <div 
+                    onClick={() => c.active && handleUpdateFeeCategory(c.id, "waived", !c.waived)}
+                    style={{ 
+                      display: "flex", alignItems: "center", gap: "10px", 
+                      cursor: c.active ? "pointer" : "not-allowed",
+                      opacity: c.waived ? 1 : 0.4
                     }}
                   >
                     <div style={{ 
                       width: "32px", height: "18px", borderRadius: "12px", 
-                      background: getWaived(c.id) ? "var(--accent-primary)" : "var(--text-tertiary)", 
+                      background: c.waived ? "var(--accent-primary)" : "var(--text-tertiary)", 
                       position: "relative", transition: "all 0.3s"
                     }}>
                       <div style={{ 
                         width: "14px", height: "14px", borderRadius: "50%", background: "white", 
                         position: "absolute", top: "2px", 
-                        left: getWaived(c.id) ? "16px" : "2px", transition: "all 0.3s",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
-                      }}/>
+                        left: c.waived ? "16px" : "2px", transition: "all 0.3s",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.1)"
+                      }} />
                     </div>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: getWaived(c.id) ? "var(--accent-primary)" : "var(--text-tertiary)" }}>Waived</span>
                   </div>
+                  <span style={{ fontSize: "0.7rem", fontWeight: 700, opacity: c.waived ? 1 : 0.3 }}>{c.waived ? "WAIVED" : "PAYING"}</span>
+                </div>
+
+                {/* 5. DELETE ACTION (ONLY FOR CUSTOM ROWS) */}
+                <div style={{ textAlign: "center" }}>
+                  {c.is_custom && (
+                    <button 
+                      onClick={() => handleRemoveFeeCategory(c.id)}
+                      className="btn-icon" 
+                      style={{ color: "var(--accent-danger)", padding: "4px" }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* ADD NEW ROW ACTION */}
+        <button 
+          onClick={handleAddFeeCategory}
+          style={{ 
+            display: "flex", alignItems: "center", gap: "8px", 
+            padding: "12px 20px", borderRadius: "12px",
+            background: "white", border: "1px dashed var(--accent-primary)",
+            color: "var(--accent-primary)", fontWeight: 700, fontSize: "0.85rem",
+            cursor: "pointer", transition: "all 0.2s",
+            width: "fit-content"
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.background = "var(--accent-primary-bg)")}
+          onMouseOut={(e) => (e.currentTarget.style.background = "white")}
+        >
+          <Plus size={18} /> Add Custom Fee Category
+        </button>
       </div>
     );
   };

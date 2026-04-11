@@ -110,6 +110,19 @@ export default function StudentPortal() {
                        <IndianRupee size={18} color="var(--accent-success)" />
                        <span style={{ fontSize: '1.05rem', fontWeight: 500 }}>{targetedExam.metadata?.salary_range || 'Salary TBD'}</span>
                     </div>
+                    {targetedExam.fee_matrix?.categories && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+                         <IndianRupee size={18} color="var(--accent-primary)" />
+                         <span style={{ fontSize: '1.05rem', fontWeight: 500 }}>
+                           {(() => {
+                             const userCat = targetedExam.fee_matrix.categories.find(c => c.active && (c.id === profile.category || (profile.category === 'SC' && c.id === 'SC_ST') || (profile.category === 'ST' && c.id === 'SC_ST')));
+                             if (!userCat) return 'Standard Fee Apply';
+                             if (userCat.waived) return 'Exempted (Free)';
+                             return `₹${userCat.amount} Application Fee`;
+                           })()}
+                         </span>
+                      </div>
+                    )}
                 </div>
                 {targetedExam.metadata?.notification_url && (
                    <div style={{ marginTop: '0.5rem' }}>

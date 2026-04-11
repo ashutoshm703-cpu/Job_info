@@ -3826,7 +3826,7 @@ export default function AdminDashboard() {
   };
 
   const renderSyllabusSplit = () => {
-    const corePercent = activeExam.syllabus?.core_percentage ?? 80;
+    const corePercent = activeExam.syllabus?.core_percentage ?? 100;
     const nonCorePercent = activeExam.syllabus?.non_core_percentage ?? (100 - corePercent);
     
     return (
@@ -3893,37 +3893,35 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {nonCorePercent > 0 && (
-            <div className="premium-glass" style={{ padding: "1.5rem", borderRadius: "20px", border: "1px solid rgba(0,0,0,0.03)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-                <div>
-                  <h5 style={{ fontSize: "0.85rem", fontWeight: 800 }}>Non-Nursing Subject Breakdown</h5>
-                  <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)" }}>Divide the aptitude portion into specific subjects.</p>
-                </div>
-                <button className="btn btn-primary" style={{ fontSize: "0.7rem", padding: "6px 12px", borderRadius: "8px" }} onClick={() => updateExamData(p => ({ ...p, syllabus: { ...p.syllabus, non_core_subjects: [...(p.syllabus?.non_core_subjects || []), { name: "" }] } }))}>
-                  + Add Subject
-                </button>
+          <div className="premium-glass" style={{ padding: "1.5rem", borderRadius: "20px", border: "1px solid rgba(0,0,0,0.03)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+              <div>
+                <h5 style={{ fontSize: "0.85rem", fontWeight: 800 }}>Non-Nursing Subject Breakdown</h5>
+                <p style={{ fontSize: "0.65rem", color: "var(--text-tertiary)" }}>Divide the aptitude portion into specific subjects.</p>
               </div>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {(activeExam.syllabus?.non_core_subjects || []).map((sub, idx) => (
-                  <div key={idx} style={{ display: "flex", gap: "1rem", alignItems: "center", background: "white", padding: "12px 20px", borderRadius: "16px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-                    <input type="text" className="form-input" style={{ flex: 1, background: "transparent", border: "none", boxShadow: "none", padding: "0", fontWeight: 700 }} placeholder="Subject Name e.g. General Knowledge" value={sub.name} onChange={e => {
-                      const newSubs = [...activeExam.syllabus.non_core_subjects];
-                      newSubs[idx].name = e.target.value;
-                      updateExamData(p => ({...p, syllabus: {...p.syllabus, non_core_subjects: newSubs}}));
-                    }}/>
-                    <button className="btn icon-btn" style={{ color: "var(--accent-warning)", background: "var(--accent-warning-bg)", width: "32px", height: "32px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => updateExamData(p => ({...p, syllabus: {...p.syllabus, non_core_subjects: p.syllabus.non_core_subjects.filter((_, i) => i !== idx)}}))}><Trash2 size={16}/></button>
-                  </div>
-                ))}
-                {(!activeExam.syllabus?.non_core_subjects || activeExam.syllabus?.non_core_subjects.length === 0) && (
-                  <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-tertiary)", fontSize: "0.8rem", fontWeight: 600 }}>
-                    No subjects added yet. Click "+ Add Subject" to begin.
-                  </div>
-                )}
-              </div>
+              <button className="btn btn-primary" style={{ fontSize: "0.7rem", padding: "6px 12px", borderRadius: "8px" }} onClick={() => updateExamData(p => ({ ...p, syllabus: { ...p.syllabus, non_core_subjects: [...(p.syllabus?.non_core_subjects || []), { name: "" }] } }))}>
+                + Add Subject
+              </button>
             </div>
-          )}
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {(activeExam.syllabus?.non_core_subjects || []).map((sub, idx) => (
+                <div key={idx} style={{ display: "flex", gap: "1rem", alignItems: "center", background: "white", padding: "12px 20px", borderRadius: "16px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+                  <input type="text" className="form-input" style={{ flex: 1, background: "transparent", border: "none", boxShadow: "none", padding: "0", fontWeight: 700 }} placeholder="Subject Name e.g. General Knowledge" value={sub.name} onChange={e => {
+                    const newSubs = [...activeExam.syllabus.non_core_subjects];
+                    newSubs[idx].name = e.target.value;
+                    updateExamData(p => ({...p, syllabus: {...p.syllabus, non_core_subjects: newSubs}}));
+                  }}/>
+                  <button className="btn icon-btn" style={{ color: "var(--accent-warning)", background: "var(--accent-warning-bg)", width: "32px", height: "32px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => updateExamData(p => ({...p, syllabus: {...p.syllabus, non_core_subjects: p.syllabus.non_core_subjects.filter((_, i) => i !== idx)}}))}><Trash2 size={16}/></button>
+                </div>
+              ))}
+              {(!activeExam.syllabus?.non_core_subjects || activeExam.syllabus?.non_core_subjects.length === 0) && (
+                <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-tertiary)", fontSize: "0.8rem", fontWeight: 600 }}>
+                  No subjects added yet. Click "+ Add Subject" to begin.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );

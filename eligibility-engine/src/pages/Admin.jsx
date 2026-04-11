@@ -1723,36 +1723,61 @@ export default function AdminDashboard() {
 
                   {/* Dedicated Date Column */}
                   <div style={{ zIndex: 1 }}>
-                    <input
-                      type="date"
-                      className="form-input"
-                      style={{ 
+                    {m.is_tentative ? (
+                       <div style={{ 
                         padding: "6px 8px", 
-                        fontSize: "0.75rem", 
-                        fontWeight: 700,
+                        fontSize: "0.62rem", 
+                        fontWeight: 900,
+                        textAlign: "center",
+                        background: "var(--bg-app-subtle)",
+                        color: "var(--accent-primary)",
+                        borderRadius: "8px",
+                        border: "1px dashed var(--accent-primary)",
                         width: "100%",
-                        border: m.is_tentative ? "1px dashed var(--accent-primary)" : "1px solid var(--border-subtle)",
-                        background: m.is_tentative ? "var(--bg-app-subtle)" : "white",
-                        color: m.is_tentative ? "var(--accent-primary)" : "inherit"
-                      }}
-                      value={m.date || ""}
-                      onChange={(e) =>
-                        handleImportantDateChange(i, "date", e.target.value)
-                      }
-                    />
+                        height: "30.5px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.02em"
+                      }}>
+                        TBA (To Be Announced)
+                      </div>
+                    ) : (
+                      <input
+                        type="date"
+                        className="form-input"
+                        style={{ 
+                          padding: "6px 8px", 
+                          fontSize: "0.75rem", 
+                          fontWeight: 700,
+                          width: "100%",
+                          border: "1px solid var(--border-subtle)",
+                          background: "white",
+                        }}
+                        value={m.date || ""}
+                        onChange={(e) =>
+                          handleImportantDateChange(i, "date", e.target.value)
+                        }
+                      />
+                    )}
                   </div>
 
                   {/* High-Precision Time Column */}
                   <div style={{ position: 'relative', zIndex: 10 }}>
                     <button
                       className={`action-pellet ${m.has_time_limit ? 'active' : ''}`}
+                      disabled={m.is_tentative}
                       style={{ 
                         width: '100%', 
                         justifyContent: 'center',
-                        background: m.has_time_limit ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-app-subtle)',
-                        border: m.has_time_limit ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)'
+                        background: m.is_tentative ? 'var(--bg-app-subtle)' : (m.has_time_limit ? 'rgba(79, 70, 229, 0.08)' : 'var(--bg-app-subtle)'),
+                        border: m.has_time_limit ? '1px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
+                        opacity: m.is_tentative ? 0.4 : 1,
+                        cursor: m.is_tentative ? "not-allowed" : "pointer"
                       }}
                       onClick={() => {
+                        if (m.is_tentative) return;
                         const isOpening = activeTimelineHud.index !== i || activeTimelineHud.type !== 'time';
                         setActiveTimelineHud(isOpening ? { index: i, type: 'time' } : { index: null, type: null });
                         if (isOpening) {

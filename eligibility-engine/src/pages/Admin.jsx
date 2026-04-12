@@ -3868,6 +3868,32 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border-subtle)" }}>
+          <label className="label-premium" style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--accent-primary)", display: "block", marginBottom: "0.75rem" }}>
+            EXAM PATTERN DESCRIPTION
+          </label>
+          <textarea 
+            className="form-input" 
+            style={{ 
+              width: "100%", 
+              minHeight: "120px", 
+              fontSize: "0.85rem", 
+              lineHeight: "1.6", 
+              padding: "1rem", 
+              borderRadius: "16px",
+              background: "rgba(0,0,0,0.01)",
+              border: "1px solid var(--border-subtle)",
+              resize: "vertical"
+            }}
+            placeholder="Describe the overall pattern, marking nuances, or special instructions for candidates..."
+            value={activeExam.exam_pattern?.description || ""}
+            onChange={e => updateExamData(p => ({ 
+              ...p, 
+              exam_pattern: { ...p.exam_pattern, description: e.target.value } 
+            }))}
+          />
+        </div>
       </div>
     );
   };
@@ -3968,6 +3994,32 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+          </div>
+
+          <div style={{ marginTop: "1.5rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
+            <label className="label-premium" style={{ fontSize: "0.75rem", fontWeight: 800, color: "var(--accent-primary)", display: "block", marginBottom: "0.75rem" }}>
+              SYLLABUS DESCRIPTION
+            </label>
+            <textarea 
+              className="form-input" 
+              style={{ 
+                width: "100%", 
+                minHeight: "120px", 
+                fontSize: "0.85rem", 
+                lineHeight: "1.6", 
+                padding: "1rem", 
+                borderRadius: "16px",
+                background: "rgba(0,0,0,0.01)",
+                border: "1px solid rgba(0,0,0,0.05)",
+                resize: "vertical"
+              }}
+              placeholder="List detailed sub-topics, reference books, or specific syllabus context for candidates..."
+              value={activeExam.syllabus?.description || ""}
+              onChange={e => updateExamData(p => ({ 
+                ...p, 
+                syllabus: { ...p.syllabus, description: e.target.value } 
+              }))}
+            />
           </div>
         </div>
       </div>

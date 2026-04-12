@@ -4118,17 +4118,16 @@ export default function AdminDashboard() {
                   <span style={{ fontSize: "0.7rem", fontWeight: 700, opacity: c.waived ? 1 : 0.3 }}>{c.waived ? "WAIVED" : "PAYING"}</span>
                 </div>
 
-                {/* 5. DELETE ACTION (ONLY FOR CUSTOM ROWS) */}
+                {/* 5. DELETE ACTION (NOW FOR ALL ROWS) */}
                 <div style={{ textAlign: "center" }}>
-                  {c.is_custom && (
-                    <button 
-                      onClick={() => handleRemoveFeeCategory(c.id)}
-                      className="btn-icon" 
-                      style={{ color: "var(--accent-danger)", padding: "4px" }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => handleRemoveFeeCategory(c.id)}
+                    className="btn-icon" 
+                    style={{ color: "var(--accent-danger)", padding: "4px" }}
+                    title={`Delete ${c.label}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}

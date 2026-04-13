@@ -1188,52 +1188,73 @@ export default function AdminDashboard() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-              <label className="form-label" style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--accent-primary)", marginBottom: 0 }}>Vacancies</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <input
-                  type="number"
-                  name="total_vacancies"
-                  className="form-input"
-                  style={{ width: "120px", fontWeight: 800, fontSize: '0.85rem', textAlign: "center" }}
-                  placeholder="Total seats"
-                  value={activeExam.metadata?.total_vacancies || ""}
-                  onChange={handleMetadataChange}
-                />
-                <span style={{
-                  fontSize: '0.7rem', fontWeight: 700,
-                  color: isOverLimit ? 'var(--accent-danger)' : 'var(--text-tertiary)',
-                  background: isOverLimit ? 'var(--accent-danger-bg)' : 'var(--bg-app-subtle)',
-                  padding: '3px 8px', borderRadius: '6px',
-                  border: isOverLimit ? '1px solid var(--accent-danger)' : '1px solid var(--border-subtle)',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {isOverLimit && <AlertTriangle size={10} style={{ marginRight: '3px', verticalAlign: 'middle' }} />}
-                  {totalCategorySum} / {totalAllowed || 0} allocated
-                </span>
-              </div>
+              <label className="form-label" style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent-primary)", marginBottom: 0 }}>Vacancies</label>
+              <input
+                type="number"
+                name="total_vacancies"
+                className="form-input"
+                style={{ width: "100px", fontWeight: 800, fontSize: '0.85rem', textAlign: "center" }}
+                placeholder="Total"
+                value={activeExam.metadata?.total_vacancies || ""}
+                onChange={handleMetadataChange}
+              />
+              <span style={{
+                fontSize: '0.7rem', fontWeight: 700,
+                color: isOverLimit ? 'var(--accent-danger)' : 'var(--text-tertiary)',
+                background: isOverLimit ? 'var(--accent-danger-bg)' : 'var(--bg-app-subtle)',
+                padding: '3px 8px', borderRadius: '6px',
+                border: isOverLimit ? '1px solid var(--accent-danger)' : '1px solid var(--border-subtle)',
+                whiteSpace: 'nowrap'
+              }}>
+                {isOverLimit && <AlertTriangle size={10} style={{ marginRight: '3px', verticalAlign: 'middle' }} />}
+                {totalCategorySum} / {totalAllowed || 0} allocated
+              </span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>Category-wise breakdown</span>
-              </div>
-              {(activeExam.metadata?.category_vacancies || []).map((cv, idx) => (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  key={idx}
-                  style={{
-                    display: "grid", gridTemplateColumns: "1fr 100px 28px", gap: "0.4rem", alignItems: "center",
-                    background: 'var(--bg-app-subtle)', padding: '2px 4px', borderRadius: '6px'
-                  }}
-                >
-                  <input type="text" className="form-input" placeholder="Category (e.g., UR, OBC...)" style={{ fontSize: "0.8rem", fontWeight: 700, border: 'none', background: 'transparent' }} value={cv.category} onChange={(e) => handleCategoryVacancyChange(idx, "category", e.target.value)} />
-                  <input type="number" className="form-input" placeholder="Count" style={{ fontSize: "0.8rem", fontWeight: 700, textAlign: 'center', border: 'none', background: 'transparent' }} value={cv.count} onChange={(e) => handleCategoryVacancyChange(idx, "count", e.target.value)} />
-                  <button onClick={() => removeCategoryVacancy(idx)} style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }} className="hover-danger"><Trash2 size={14} /></button>
-                </motion.div>
-              ))}
-              <button className="btn" style={{ padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700, background: 'white', color: 'var(--accent-primary)', border: '1px solid var(--border-subtle)', width: 'fit-content', borderRadius: '6px', marginTop: '0.2rem' }} onClick={addCategoryVacancy}><Plus size={12} /> Add category</button>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
+              {(activeExam.metadata?.category_vacancies || []).map((cv, idx) => {
+                const PRESET_CATEGORIES = ["UR", "OBC", "SC", "ST", "EWS", "PwBD", "Women", "Ex-Servicemen"];
+
+                return (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    key={idx}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0px",
+                      background: "var(--bg-app-subtle)", borderRadius: "6px",
+                      border: "1px solid var(--border-subtle)", overflow: "hidden",
+                    }}
+                  >
+                    <select
+                      className="form-select"
+                      style={{ fontSize: "0.75rem", fontWeight: 700, border: "none", background: "transparent", padding: "4px 6px", minHeight: "auto", cursor: "pointer" }}
+                      value={cv.category}
+                      onChange={(e) => handleCategoryVacancyChange(idx, "category", e.target.value)}
+                    >
+                      <option value="">Category</option>
+                      {PRESET_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <div style={{ width: "1px", height: "16px", background: "var(--border-subtle)" }} />
+                    <input
+                      type="number"
+                      className="form-input"
+                      placeholder="Seats"
+                      style={{ width: "55px", fontSize: "0.8rem", fontWeight: 700, textAlign: "center", border: "none", background: "transparent", padding: "4px 2px", minHeight: "auto" }}
+                      value={cv.count}
+                      onChange={(e) => handleCategoryVacancyChange(idx, "count", e.target.value)}
+                    />
+                    <button
+                      onClick={() => removeCategoryVacancy(idx)}
+                      style={{ background: "transparent", border: "none", borderLeft: "1px solid var(--border-subtle)", color: "var(--text-tertiary)", cursor: "pointer", padding: "4px 6px", display: "flex" }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </motion.div>
+                );
+              })}
+              <button className="btn" style={{ padding: '4px 10px', fontSize: '0.7rem', fontWeight: 700, background: 'white', color: 'var(--accent-primary)', border: '1px dashed var(--accent-primary)', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={addCategoryVacancy}><Plus size={12} /> Add</button>
             </div>
 
             {isOverLimit && (
@@ -1421,51 +1442,76 @@ export default function AdminDashboard() {
                       gap: '0.5rem',
                     }}
                   >
-                    {/* Row 1: Event name */}
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.75rem' }}>Event name</label>
+                    {/* Row 1: Event name + Remove */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <label style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>Event name</label>
                       <input
                         className="form-input"
-                        style={{ fontSize: "0.8rem", fontWeight: 700 }}
+                        style={{ flex: 1, fontSize: "0.8rem", fontWeight: 700 }}
                         value={m.label || ""}
                         onChange={(e) => handleImportantDateChange(i, "label", e.target.value)}
                         placeholder={m.template_label || "Enter event name..."}
                       />
+                      <button onClick={(e) => { e.stopPropagation(); removeImportantDate(i); }} style={{ padding: "3px 8px", fontSize: "0.7rem", fontWeight: 700, color: "var(--accent-danger)", background: "transparent", border: "1px solid var(--accent-danger)", borderRadius: "4px", cursor: "pointer", display: "flex", alignItems: "center", gap: "3px", whiteSpace: "nowrap" }}>
+                        <Trash2 size={11} /> Remove
+                      </button>
                     </div>
                     {/* Row 2: TBA + Date + Time */}
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.7rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
                         <input type="checkbox" style={{ width: '14px', height: '14px' }} checked={m.is_tentative || false} onChange={(e) => handleImportantDateChange(i, "is_tentative", e.target.checked)} />
                         TBA
                       </label>
                       {m.is_tentative ? (
-                        <div style={{ flex: 1, padding: "4px 8px", fontSize: "0.7rem", fontWeight: 800, textAlign: "center", background: "var(--bg-app-subtle)", color: "var(--accent-primary)", borderRadius: "6px", border: "1px dashed var(--accent-primary)" }}>To be announced</div>
+                        <div style={{ padding: "4px 12px", fontSize: "0.75rem", fontWeight: 700, background: "var(--bg-app-subtle)", color: "var(--text-tertiary)", borderRadius: "6px", border: "1px dashed var(--border-subtle)" }}>To be announced</div>
                       ) : (
-                        <input type="date" className="form-input" style={{ flex: 1, fontSize: "0.8rem", fontWeight: 700 }} value={m.date || ""} onChange={(e) => handleImportantDateChange(i, "date", e.target.value)} />
+                        <>
+                          <label style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>Date</label>
+                          <input type="date" className="form-input" style={{ width: "170px", fontSize: "0.8rem", fontWeight: 700 }} value={m.date || ""} onChange={(e) => handleImportantDateChange(i, "date", e.target.value)} />
+                          <label style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>Time</label>
+                          {(() => {
+                            const timeVal = m.start_time || "";
+                            let hr24 = "", min = "";
+                            if (timeVal) { const parts = timeVal.split(":"); hr24 = parseInt(parts[0]) || 0; min = parts[1] || "00"; }
+                            const hr12 = hr24 === "" ? "" : (hr24 === 0 ? 12 : hr24 > 12 ? hr24 - 12 : hr24);
+                            const ampm = hr24 === "" ? "AM" : (hr24 >= 12 ? "PM" : "AM");
+                            const setTime = (h, m2, ap) => {
+                              let h24 = parseInt(h) || 0;
+                              if (ap === "PM" && h24 < 12) h24 += 12;
+                              if (ap === "AM" && h24 === 12) h24 = 0;
+                              const val = `${String(h24).padStart(2, '0')}:${m2}`;
+                              handleImportantDateChange(i, "start_time", val);
+                              if (!m.has_time_limit) handleImportantDateChange(i, "has_time_limit", true);
+                            };
+                            return (
+                              <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                                <select className="form-select" style={{ width: "55px", fontWeight: 700, fontSize: "0.8rem", padding: "3px 2px", minHeight: "auto", textAlign: "center" }} value={hr12} onChange={(e) => setTime(e.target.value, min || "00", ampm)} disabled={m.is_tentative}>
+                                  <option value="">--</option>
+                                  {[12,1,2,3,4,5,6,7,8,9,10,11].map(h => <option key={h} value={h}>{h}</option>)}
+                                </select>
+                                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-tertiary)" }}>:</span>
+                                <input type="number" className="form-input" min="0" max="59" style={{ width: "45px", fontWeight: 700, fontSize: "0.8rem", padding: "3px 4px", minHeight: "auto", textAlign: "center" }} placeholder="00" value={min} onChange={(e) => { const v = Math.max(0, Math.min(59, parseInt(e.target.value) || 0)); setTime(hr12 || "12", String(v).padStart(2, '0'), ampm); }} disabled={m.is_tentative} />
+                                <select className="form-select" style={{ width: "55px", fontWeight: 700, fontSize: "0.8rem", padding: "3px 2px", minHeight: "auto", textAlign: "center" }} value={ampm} onChange={(e) => setTime(hr12 || "12", min || "00", e.target.value)} disabled={m.is_tentative}>
+                                  <option value="AM">AM</option>
+                                  <option value="PM">PM</option>
+                                </select>
+                              </div>
+                            );
+                          })()}
+                        </>
                       )}
-                      <input type="time" className="form-input" style={{ width: "110px", fontWeight: 700, fontSize: "0.8rem" }} value={m.start_time || ""} onChange={(e) => { handleImportantDateChange(i, "start_time", e.target.value); if (!m.has_time_limit) handleImportantDateChange(i, "has_time_limit", true); }} disabled={m.is_tentative} placeholder="Time" />
                     </div>
                     {/* Row 3: CTA text + URL */}
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginBottom: '0.25rem' }}>Action button (CTA)</label>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.5rem" }}>
-                        <input className="form-input" placeholder="Button text (e.g. Apply Now)" value={m.cta_text || ""} onChange={(e) => handleImportantDateChange(i, "cta_text", e.target.value)} style={{ fontSize: "0.8rem" }} />
-                        <input className="form-input" placeholder="Link URL (https://...)" value={m.action_url || ""} onChange={(e) => handleImportantDateChange(i, "action_url", e.target.value)} style={{ fontSize: "0.8rem" }} />
-                      </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: "nowrap" }}>CTA</label>
+                      <input className="form-input" placeholder="Button text (e.g. Apply Now)" value={m.cta_text || ""} onChange={(e) => handleImportantDateChange(i, "cta_text", e.target.value)} style={{ fontSize: "0.8rem", flex: 1 }} />
+                      <input className="form-input" placeholder="Link URL (https://...)" value={m.action_url || ""} onChange={(e) => handleImportantDateChange(i, "action_url", e.target.value)} style={{ fontSize: "0.8rem", flex: 1.5 }} />
                     </div>
                     {/* Row 4: Video title + URL */}
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.7rem', color: 'var(--accent-primary)', marginBottom: '0.25rem' }}>Prep video</label>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "0.5rem" }}>
-                        <input className="form-input" placeholder="Video title (e.g. Strategy Guide)" value={m.resources?.video?.title || ""} onChange={(e) => handleImportantDateChange(i, "resources.video.title", e.target.value)} style={{ fontSize: "0.8rem" }} />
-                        <input className="form-input" placeholder="YouTube URL (https://...)" value={m.resources?.video?.url || ""} onChange={(e) => handleImportantDateChange(i, "resources.video.url", e.target.value)} style={{ fontSize: "0.8rem" }} />
-                      </div>
-                    </div>
-                    {/* Delete button */}
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      <button onClick={(e) => { e.stopPropagation(); removeImportantDate(i); }} style={{ padding: "4px 10px", fontSize: "0.75rem", fontWeight: 700, color: "var(--accent-danger)", background: "var(--accent-danger-bg)", border: "1px solid var(--accent-danger)", borderRadius: "6px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
-                        <Trash2 size={12} /> Remove
-                      </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-primary)', whiteSpace: "nowrap" }}>Video</label>
+                      <input className="form-input" placeholder="Video title (e.g. Strategy Guide)" value={m.resources?.video?.title || ""} onChange={(e) => handleImportantDateChange(i, "resources.video.title", e.target.value)} style={{ fontSize: "0.8rem", flex: 1 }} />
+                      <input className="form-input" placeholder="YouTube URL (https://...)" value={m.resources?.video?.url || ""} onChange={(e) => handleImportantDateChange(i, "resources.video.url", e.target.value)} style={{ fontSize: "0.8rem", flex: 1.5 }} />
                     </div>
                   </motion.div>
                 )}
@@ -1727,37 +1773,81 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Row 3: Relaxations */}
+        {/* Row 3: Relaxations + Additional Rules — 3 columns */}
         <div style={{ background: "white", padding: "0.75rem", borderRadius: "10px", border: "1px solid var(--border-subtle)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-            {/* Category relaxations */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+            {/* Col 1: Category relaxations */}
             <div>
               <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "0.4rem" }}>Category relaxations</span>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 {["OBC", "SC", "ST"].map((cat) => (
                   <div key={cat} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "35px" }}>{cat}</span>
-                    <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} value={activeExam.category_relaxations?.[cat] ?? ""} onChange={(e) => handleCategoryRelaxation(cat, e.target.value)} placeholder="0" />
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "30px" }}>{cat}</span>
+                    <input type="number" className="form-input" style={{ width: "55px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} value={activeExam.category_relaxations?.[cat] ?? ""} onChange={(e) => handleCategoryRelaxation(cat, e.target.value)} placeholder="0" />
                     <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>yrs</span>
                   </div>
                 ))}
               </div>
             </div>
-            {/* PwBD relaxations */}
+            {/* Col 2: PwBD relaxations */}
             <div>
               <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "0.4rem" }}>PwBD relaxations</span>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 {["UR", "OBC", "SC"].map((pCat) => (
                   <div key={pCat} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "75px" }}>PwBD ({pCat})</span>
-                    <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} value={activeExam.pwbd_relaxations?.[pCat] ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, pwbd_relaxations: { ...p.pwbd_relaxations, [pCat]: Number(e.target.value), ...(pCat === "SC" ? { ST: Number(e.target.value) } : {}) } }))} placeholder="0" />
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "65px" }}>PwBD ({pCat})</span>
+                    <input type="number" className="form-input" style={{ width: "55px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} value={activeExam.pwbd_relaxations?.[pCat] ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, pwbd_relaxations: { ...p.pwbd_relaxations, [pCat]: Number(e.target.value), ...(pCat === "SC" ? { ST: Number(e.target.value) } : {}) } }))} placeholder="0" />
                     <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>yrs</span>
                   </div>
                 ))}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "75px" }}>PwBD cap</span>
-                  <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} placeholder="56" value={activeExam.pwbd_max_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, pwbd_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "65px" }}>PwBD cap</span>
+                  <input type="number" className="form-input" style={{ width: "55px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} placeholder="56" value={activeExam.pwbd_max_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, pwbd_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value) }))} />
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>yrs</span>
+                </div>
+              </div>
+            </div>
+            {/* Col 3: Additional rules */}
+            <div>
+              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "0.4rem" }}>Additional rules</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div style={{ padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)" }}>Ex-servicemen</span>
+                    <div style={{ flex: 1 }} />
+                    {toggle(activeExam.has_esm_relaxation, () => updateExamData((p) => ({ ...p, has_esm_relaxation: !p.has_esm_relaxation })))}
+                  </div>
+                  {activeExam.has_esm_relaxation && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "4px" }}>
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Grace</span>
+                      <input type="number" className="form-input" style={{ width: "50px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "2px 3px", minHeight: "auto" }} placeholder="0" value={activeExam.esm_grace_period ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_grace_period: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>yrs</span>
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginLeft: "4px" }}>Cap</span>
+                      <input type="number" className="form-input" style={{ width: "50px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "2px 3px", minHeight: "auto" }} placeholder="50" value={activeExam.esm_max_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>yrs</span>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)" }}>Govt. employee</span>
+                  <div style={{ flex: 1 }} />
+                  {toggle(activeExam.show_govt_caution, () => updateExamData((p) => ({ ...p, show_govt_caution: !p.show_govt_caution })))}
+                </div>
+                <div style={{ padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)" }}>Marital rules</span>
+                    <div style={{ flex: 1 }} />
+                    {toggle(activeExam.has_marital_restriction, () => updateExamData((p) => ({ ...p, has_marital_restriction: !p.has_marital_restriction })))}
+                  </div>
+                  {activeExam.has_marital_restriction && (
+                    <div style={{ display: "flex", gap: "4px", marginTop: "4px" }}>
+                      {["Unmarried", "Married", "Widow"].map((s) => (
+                        <button key={s} onClick={() => toggleMaritalStatus(s)} style={{ fontSize: "0.7rem", padding: "3px 8px", borderRadius: "4px", border: "1px solid var(--border-subtle)", cursor: "pointer", background: activeExam.allowed_marital_statuses?.includes(s) ? "var(--accent-primary)" : "white", color: activeExam.allowed_marital_statuses?.includes(s) ? "white" : "var(--text-secondary)", fontWeight: 600 }}>
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1765,54 +1855,6 @@ export default function AdminDashboard() {
           <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "0.6rem", fontWeight: 500 }}>
             These relaxation years get added to the upper age limit.
           </p>
-
-          {/* Additional rules — merged into same card */}
-          <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: "0.6rem", paddingTop: "0.6rem" }}>
-            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "0.4rem" }}>Additional rules</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-              {/* ESM */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Ex-servicemen</span>
-                {toggle(activeExam.has_esm_relaxation, () => updateExamData((p) => ({ ...p, has_esm_relaxation: !p.has_esm_relaxation })))}
-                {activeExam.has_esm_relaxation ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Grace</span>
-                      <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} placeholder="0" value={activeExam.esm_grace_period ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_grace_period: e.target.value === "" ? "" : Number(e.target.value) }))} />
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>yrs</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Cap</span>
-                      <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} placeholder="50" value={activeExam.esm_max_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value) }))} />
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>yrs</span>
-                    </div>
-                  </div>
-                ) : (
-                  <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Off</span>
-                )}
-              </div>
-
-              {/* Govt Employee */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Govt. employee</span>
-                {toggle(activeExam.show_govt_caution, () => updateExamData((p) => ({ ...p, show_govt_caution: !p.show_govt_caution })))}
-                <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>{activeExam.show_govt_caution ? "Show a heads-up for govt employees" : "Off"}</span>
-              </div>
-
-              {/* Marital Status */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Marital rules</span>
-                {toggle(activeExam.has_marital_restriction, () => updateExamData((p) => ({ ...p, has_marital_restriction: !p.has_marital_restriction })))}
-                <div style={{ display: "flex", gap: "4px" }}>
-                  {["Unmarried", "Married", "Widow"].map((s) => (
-                    <button key={s} onClick={() => toggleMaritalStatus(s)} style={{ fontSize: "0.7rem", padding: "3px 10px", borderRadius: "4px", border: "1px solid var(--border-subtle)", cursor: "pointer", background: activeExam.allowed_marital_statuses?.includes(s) ? "var(--accent-primary)" : "white", color: activeExam.allowed_marital_statuses?.includes(s) ? "white" : "var(--text-secondary)", fontWeight: 600, pointerEvents: activeExam.has_marital_restriction ? "auto" : "none", opacity: activeExam.has_marital_restriction ? 1 : 0.4 }}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     );

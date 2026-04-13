@@ -1735,12 +1735,10 @@ export default function AdminDashboard() {
               <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "0.4rem" }}>Category relaxations</span>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 {["OBC", "SC", "ST"].map((cat) => (
-                  <div key={cat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)" }}>{cat}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <input type="number" style={{ width: "35px", background: "transparent", border: "none", borderBottom: "1px solid var(--border-strong)", textAlign: "center", fontWeight: 700, color: "var(--text-primary)", fontSize: "0.85rem" }} value={activeExam.category_relaxations?.[cat] ?? ""} onChange={(e) => handleCategoryRelaxation(cat, e.target.value)} />
-                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>yrs</span>
-                    </div>
+                  <div key={cat} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "35px" }}>{cat}</span>
+                    <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} value={activeExam.category_relaxations?.[cat] ?? ""} onChange={(e) => handleCategoryRelaxation(cat, e.target.value)} placeholder="0" />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>yrs</span>
                   </div>
                 ))}
               </div>
@@ -1750,20 +1748,16 @@ export default function AdminDashboard() {
               <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "0.4rem" }}>PwBD relaxations</span>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 {["UR", "OBC", "SC"].map((pCat) => (
-                  <div key={pCat} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)" }}>PwBD ({pCat})</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <input type="number" style={{ width: "35px", background: "transparent", border: "none", borderBottom: "1px solid var(--border-strong)", textAlign: "center", fontWeight: 700, color: "var(--text-primary)", fontSize: "0.85rem" }} value={activeExam.pwbd_relaxations?.[pCat] ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, pwbd_relaxations: { ...p.pwbd_relaxations, [pCat]: Number(e.target.value), ...(pCat === "SC" ? { ST: Number(e.target.value) } : {}) } }))} />
-                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>yrs</span>
-                    </div>
+                  <div key={pCat} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "75px" }}>PwBD ({pCat})</span>
+                    <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} value={activeExam.pwbd_relaxations?.[pCat] ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, pwbd_relaxations: { ...p.pwbd_relaxations, [pCat]: Number(e.target.value), ...(pCat === "SC" ? { ST: Number(e.target.value) } : {}) } }))} placeholder="0" />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>yrs</span>
                   </div>
                 ))}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 8px", background: "var(--accent-primary-bg)", borderRadius: "6px", marginTop: "2px" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--accent-primary)" }}>PwBD cap</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <input type="number" style={{ width: "35px", background: "transparent", border: "none", borderBottom: "1.5px solid var(--accent-primary)", textAlign: "center", fontWeight: 700, color: "var(--accent-primary)", fontSize: "0.85rem" }} placeholder="56" value={activeExam.pwbd_max_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, pwbd_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value) }))} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-primary)' }}>yrs</span>
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "4px 8px", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "75px" }}>PwBD cap</span>
+                  <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} placeholder="56" value={activeExam.pwbd_max_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, pwbd_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-tertiary)' }}>yrs</span>
                 </div>
               </div>
             </div>
@@ -1771,51 +1765,51 @@ export default function AdminDashboard() {
           <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: "0.6rem", fontWeight: 500 }}>
             These relaxation years get added to the upper age limit.
           </p>
-        </div>
 
-        {/* Row 4: Additional Rules */}
-        <div style={{ background: "white", padding: "0.75rem", borderRadius: "10px", border: "1px solid var(--border-subtle)" }}>
-          <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "0.5rem" }}>Additional rules</span>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-            {/* ESM */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Ex-servicemen</span>
-              {toggle(activeExam.has_esm_relaxation, () => updateExamData((p) => ({ ...p, has_esm_relaxation: !p.has_esm_relaxation })))}
-              {activeExam.has_esm_relaxation ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Grace</span>
-                    <input type="number" style={{ width: "40px", background: "white", border: "1px solid var(--border-strong)", borderRadius: "4px", textAlign: "center", fontWeight: 700, fontSize: "0.8rem", padding: "2px" }} placeholder="0" value={activeExam.esm_grace_period ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_grace_period: e.target.value === "" ? "" : Number(e.target.value) }))} />
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>yrs</span>
+          {/* Additional rules — merged into same card */}
+          <div style={{ borderTop: "1px solid var(--border-subtle)", marginTop: "0.6rem", paddingTop: "0.6rem" }}>
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-primary)", display: "block", marginBottom: "0.4rem" }}>Additional rules</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              {/* ESM */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Ex-servicemen</span>
+                {toggle(activeExam.has_esm_relaxation, () => updateExamData((p) => ({ ...p, has_esm_relaxation: !p.has_esm_relaxation })))}
+                {activeExam.has_esm_relaxation ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Grace</span>
+                      <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} placeholder="0" value={activeExam.esm_grace_period ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_grace_period: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>yrs</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Cap</span>
+                      <input type="number" className="form-input" style={{ width: "60px", fontWeight: 700, fontSize: "0.8rem", textAlign: "center", padding: "3px 4px", minHeight: "auto" }} placeholder="50" value={activeExam.esm_max_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value) }))} />
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>yrs</span>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Cap</span>
-                    <input type="number" style={{ width: "40px", background: "white", border: "1px solid var(--border-strong)", borderRadius: "4px", textAlign: "center", fontWeight: 700, fontSize: "0.8rem", padding: "2px" }} placeholder="50" value={activeExam.esm_max_age_ceiling ?? ""} onChange={(e) => updateExamData((p) => ({ ...p, esm_max_age_ceiling: e.target.value === "" ? "" : Number(e.target.value) }))} />
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>yrs</span>
-                  </div>
+                ) : (
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Off</span>
+                )}
+              </div>
+
+              {/* Govt Employee */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Govt. employee</span>
+                {toggle(activeExam.show_govt_caution, () => updateExamData((p) => ({ ...p, show_govt_caution: !p.show_govt_caution })))}
+                <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>{activeExam.show_govt_caution ? "Show a heads-up for govt employees" : "Off"}</span>
+              </div>
+
+              {/* Marital Status */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Marital rules</span>
+                {toggle(activeExam.has_marital_restriction, () => updateExamData((p) => ({ ...p, has_marital_restriction: !p.has_marital_restriction })))}
+                <div style={{ display: "flex", gap: "4px" }}>
+                  {["Unmarried", "Married", "Widow"].map((s) => (
+                    <button key={s} onClick={() => toggleMaritalStatus(s)} style={{ fontSize: "0.7rem", padding: "3px 10px", borderRadius: "4px", border: "1px solid var(--border-subtle)", cursor: "pointer", background: activeExam.allowed_marital_statuses?.includes(s) ? "var(--accent-primary)" : "white", color: activeExam.allowed_marital_statuses?.includes(s) ? "white" : "var(--text-secondary)", fontWeight: 600, pointerEvents: activeExam.has_marital_restriction ? "auto" : "none", opacity: activeExam.has_marital_restriction ? 1 : 0.4 }}>
+                      {s}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>Off</span>
-              )}
-            </div>
-
-            {/* Govt Employee */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Govt. employee</span>
-              {toggle(activeExam.show_govt_caution, () => updateExamData((p) => ({ ...p, show_govt_caution: !p.show_govt_caution })))}
-              <span style={{ fontSize: "0.7rem", color: "var(--text-tertiary)" }}>{activeExam.show_govt_caution ? "Show a heads-up for govt employees" : "Off"}</span>
-            </div>
-
-            {/* Marital Status */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.4rem 0.5rem", background: "var(--bg-app-subtle)", borderRadius: "6px" }}>
-              <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", minWidth: "130px" }}>Marital rules</span>
-              {toggle(activeExam.has_marital_restriction, () => updateExamData((p) => ({ ...p, has_marital_restriction: !p.has_marital_restriction })))}
-              <div style={{ display: "flex", gap: "4px" }}>
-                {["Unmarried", "Married", "Widow"].map((s) => (
-                  <button key={s} onClick={() => toggleMaritalStatus(s)} style={{ fontSize: "0.7rem", padding: "3px 10px", borderRadius: "4px", border: "1px solid var(--border-subtle)", cursor: "pointer", background: activeExam.allowed_marital_statuses?.includes(s) ? "var(--accent-primary)" : "white", color: activeExam.allowed_marital_statuses?.includes(s) ? "white" : "var(--text-secondary)", fontWeight: 600, pointerEvents: activeExam.has_marital_restriction ? "auto" : "none", opacity: activeExam.has_marital_restriction ? 1 : 0.4 }}>
-                    {s}
-                  </button>
-                ))}
               </div>
             </div>
           </div>

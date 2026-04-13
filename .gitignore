@@ -28,3 +28,4 @@ tmp/
 # Project specific
 eligibility-engine/.next/
 eligibility-engine/out/
+.vercel

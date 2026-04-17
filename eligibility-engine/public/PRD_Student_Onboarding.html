@@ -1338,50 +1338,6 @@ flowchart LR
   </div>
 </div>
 
-<!-- ===================== DATA MODEL ===================== -->
-<div class="sb" style="border-left:3px solid #15CAE8">
-  <div class="sb-head" style="background:#0f172a">
-    <h3>Appendix: Data Model</h3>
-    <span class="badge" style="background:rgba(255,255,255,.15)">Reference</span>
-  </div>
-  <div class="sb-body">
-    <p style="font-size:.8rem">The student profile object created by onboarding. This is passed to the Eligibility Engine.</p>
-<pre style="background:#0f172a;color:#e2e8f0;padding:1rem;border-radius:10px;font-family:monospace;font-size:.7rem;overflow-x:auto;line-height:1.6">{
-  "personal": {
-    "dob": "1998-05-15",         <span style="color:#94a3b8">// FR 3.2</span>
-    "gender": "Female",           <span style="color:#94a3b8">// FR 3.2</span>
-    "category": "OBC",            <span style="color:#94a3b8">// FR 3.2</span>
-    "home_state": "Rajasthan",    <span style="color:#94a3b8">// FR 3.2</span>
-    "citizenship": "Indian Citizen" <span style="color:#94a3b8">// FR 3.2 (pre-filled)</span>
-  },
-  "education": {
-    "highest_schooling": "12th_science",  <span style="color:#94a3b8">// FR 3.3</span>
-    "qualification": "B.Sc. Nursing",     <span style="color:#94a3b8">// FR 3.3</span>
-    "status": "Passed Out"                <span style="color:#94a3b8">// FR 3.3</span>
-  },
-  "registration": {              <span style="color:#94a3b8">// FR 3.4 (if Passed Out)</span>
-    "inc_recognised": true,
-    "nursing_council_state": "Rajasthan",
-    "has_experience": true,
-    "experience_months": 24,
-    "hospital_bed_count": "100-200"
-  },
-  "special_categories": {        <span style="color:#94a3b8">// FR 3.5 (all optional)</span>
-    "marital_status": "",
-    "is_pwd": false,
-    "is_esm": false,
-    "esm_months": 0,
-    "is_govt_employee": false,
-    "is_jk_domicile": false
-  }
-}</pre>
-  </div>
-</div>
-
-<div style="text-align:center;padding:2rem;color:#94a3b8;font-size:.75rem">
-  End of Onboarding Section
-</div>
-
 <!-- ===================================================== -->
 <!-- PART 4: JOBS FEED — SORTING, LIFECYCLE & EXPIRY -->
 <!-- ===================================================== -->

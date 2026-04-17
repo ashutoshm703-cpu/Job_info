@@ -300,6 +300,147 @@
   }
   .screen-2 .progress-fill { width: 66%; }
 
+  /* ─────────────────────── SPLASH — Welcome ─────────────────────── */
+  .screen-splash {
+    background: linear-gradient(180deg, #FFE4D6 0%, #FFF4ED 40%, #fff 100%);
+  }
+  .splash-body {
+    flex: 1;
+    padding: 2rem 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 1.25rem;
+  }
+  .splash-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    padding: .5rem 1rem;
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--midnight);
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    margin-bottom: 1rem;
+  }
+  .splash-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    animation: greenPulse 2s ease-in-out infinite;
+  }
+  @keyframes greenPulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+    50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  }
+
+  .splash-title {
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--text-primary);
+    letter-spacing: -0.03em;
+    max-width: 280px;
+    animation: slideInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: .3s;
+  }
+  .splash-subtitle {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    max-width: 280px;
+    animation: slideInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: .4s;
+  }
+
+  .splash-cta {
+    width: 100%;
+    padding: 1rem 1.75rem 2rem;
+    flex-shrink: 0;
+  }
+  .splash-cta .btn {
+    width: 100%;
+    padding: 1.1rem;
+    font-size: 1rem;
+  }
+
+  /* ─────────────────────── RESULTS — Celebration ─────────────────────── */
+  .screen-results {
+    background: linear-gradient(180deg, var(--mint) 0%, #F0FDF4 40%, #fff 100%);
+  }
+  .results-body {
+    flex: 1;
+    padding: 2rem 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 1rem;
+  }
+  .big-number {
+    font-size: 5.5rem;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(120deg, var(--sky), var(--midnight));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.04em;
+    animation: scaleIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: .4s;
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .results-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    max-width: 280px;
+    animation: slideInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: .6s;
+  }
+  .results-sub {
+    font-size: .95rem;
+    color: var(--text-secondary);
+    max-width: 280px;
+    animation: slideInUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: .7s;
+  }
+  .results-sub strong {
+    color: var(--midnight);
+    font-weight: 700;
+  }
+
+  /* Confetti dots for celebration feel */
+  .confetti {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    animation: confettiDrop 2s ease-out forwards;
+  }
+  .confetti.c1 { left: 20%; top: 15%; background: #FDBA74; animation-delay: .6s; }
+  .confetti.c2 { left: 80%; top: 20%; background: var(--sky); animation-delay: .7s; }
+  .confetti.c3 { left: 30%; top: 25%; background: #F9A8D4; animation-delay: .8s; }
+  .confetti.c4 { left: 70%; top: 18%; background: #86EFAC; animation-delay: .5s; }
+  .confetti.c5 { left: 50%; top: 12%; background: var(--midnight); animation-delay: .9s; }
+  @keyframes confettiDrop {
+    0% { opacity: 0; transform: translateY(-20px) rotate(0); }
+    30% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(200px) rotate(720deg); }
+  }
+
   /* ─────────────────────── SCREEN 3 — Optional ─────────────────────── */
   .screen-3 {
     background: linear-gradient(180deg, var(--mint) 0%, #fff 50%);
@@ -524,6 +665,57 @@
 
 <div class="container">
 
+<!-- SPLASH — Welcome screen WITH mascot (emotional moment) -->
+<div style="position: relative;">
+  <div class="phone-label">FR 3.1 — Splash / Welcome</div>
+  <div class="phone screen-splash">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>●●●</span>
+    </div>
+
+    <div class="decoration blob-1" style="background: radial-gradient(circle, #FFB593 0%, transparent 70%);"></div>
+    <div class="decoration blob-2" style="background: radial-gradient(circle, var(--sky) 0%, transparent 70%); top: 500px; right: -40px; opacity: 0.2;"></div>
+
+    <div class="splash-body">
+      <div class="splash-badge">
+        <span class="dot"></span>
+        <span>80,000+ students trust NPrep</span>
+      </div>
+
+      <div class="mascot-wrap" style="margin: 0 auto 1rem;">
+        <div class="mascot-halo"></div>
+        <div class="mascot" style="width: 150px; height: 150px;">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 30 55 Q 30 25, 60 25 Q 90 25, 90 55 L 88 68 Q 85 58, 80 55 L 40 55 Q 35 58, 32 68 Z" fill="#3D2817"/>
+            <ellipse cx="60" cy="55" rx="22" ry="25" fill="#F5C9A0"/>
+            <ellipse cx="52" cy="52" rx="2" ry="3" fill="#2C1810"/>
+            <ellipse cx="68" cy="52" rx="2" ry="3" fill="#2C1810"/>
+            <path d="M 48 46 Q 52 44, 56 46" stroke="#3D2817" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M 64 46 Q 68 44, 72 46" stroke="#3D2817" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <circle cx="46" cy="60" r="3" fill="#FFB3A0" opacity="0.6"/>
+            <circle cx="74" cy="60" r="3" fill="#FFB3A0" opacity="0.6"/>
+            <path d="M 54 64 Q 60 68, 66 64" stroke="#2C1810" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M 30 88 L 30 120 L 90 120 L 90 88 Q 85 80, 60 80 Q 35 80, 30 88 Z" fill="#15CAE8"/>
+            <path d="M 50 80 L 60 92 L 70 80 Q 65 78, 60 78 Q 55 78, 50 80 Z" fill="#0EA5C9"/>
+            <path d="M 50 85 Q 45 100, 50 110 Q 55 115, 60 113" stroke="#1F2937" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <circle cx="61" cy="114" r="3" fill="#374151"/>
+            <rect x="72" y="92" width="10" height="7" rx="1" fill="#fff" stroke="#0EA5C9" stroke-width="0.5"/>
+          </svg>
+        </div>
+        <div class="wave-greeting">👋</div>
+      </div>
+
+      <h1 class="splash-title">Your nursing<br>career, <span style="background: linear-gradient(120deg, var(--sky), var(--midnight)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">sorted</span>.</h1>
+      <p class="splash-subtitle">Find government nursing exams matched to your profile. Only takes a minute.</p>
+    </div>
+
+    <div class="splash-cta">
+      <button class="btn btn-primary">Let's begin →</button>
+    </div>
+  </div>
+</div>
+
 <!-- SCREEN 1 -->
 <div style="position: relative;">
   <div class="phone-label">FR 3.2 — About You</div>
@@ -545,42 +737,8 @@
     </div>
 
     <div class="scroll-body">
-      <div class="mascot-wrap">
-        <div class="mascot-halo"></div>
-        <div class="mascot">
-          <!-- Simple friendly nurse illustration (SVG) -->
-          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-            <!-- Hair -->
-            <path d="M 30 55 Q 30 25, 60 25 Q 90 25, 90 55 L 88 68 Q 85 58, 80 55 L 40 55 Q 35 58, 32 68 Z" fill="#3D2817"/>
-            <!-- Face -->
-            <ellipse cx="60" cy="55" rx="22" ry="25" fill="#F5C9A0"/>
-            <!-- Eyes -->
-            <ellipse cx="52" cy="52" rx="2" ry="3" fill="#2C1810"/>
-            <ellipse cx="68" cy="52" rx="2" ry="3" fill="#2C1810"/>
-            <!-- Eyebrows -->
-            <path d="M 48 46 Q 52 44, 56 46" stroke="#3D2817" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-            <path d="M 64 46 Q 68 44, 72 46" stroke="#3D2817" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-            <!-- Cheeks -->
-            <circle cx="46" cy="60" r="3" fill="#FFB3A0" opacity="0.6"/>
-            <circle cx="74" cy="60" r="3" fill="#FFB3A0" opacity="0.6"/>
-            <!-- Smile -->
-            <path d="M 54 64 Q 60 68, 66 64" stroke="#2C1810" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-            <!-- Scrubs top -->
-            <path d="M 30 88 L 30 120 L 90 120 L 90 88 Q 85 80, 60 80 Q 35 80, 30 88 Z" fill="#15CAE8"/>
-            <!-- Neckline V -->
-            <path d="M 50 80 L 60 92 L 70 80 Q 65 78, 60 78 Q 55 78, 50 80 Z" fill="#0EA5C9"/>
-            <!-- Stethoscope -->
-            <path d="M 50 85 Q 45 100, 50 110 Q 55 115, 60 113" stroke="#1F2937" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-            <circle cx="61" cy="114" r="3" fill="#374151"/>
-            <!-- Name tag -->
-            <rect x="72" y="92" width="10" height="7" rx="1" fill="#fff" stroke="#0EA5C9" stroke-width="0.5"/>
-          </svg>
-        </div>
-        <div class="wave-greeting">👋</div>
-      </div>
-
-      <h1 class="hero-question" style="text-align: center; margin-top: 1.5rem;">Hi there!<br>Let's start with <span class="accent">the basics</span>.</h1>
-      <p class="hero-subtitle" style="text-align: center;">These help us match you to the right exams.</p>
+      <h1 class="hero-question">Let's start with<br>the <span class="accent">basics</span>.</h1>
+      <p class="hero-subtitle">These help us match you to the right exams.</p>
 
       <div class="fields">
         <div class="field">
@@ -762,6 +920,60 @@
     <div class="btn-row">
       <button class="btn btn-ghost">Back</button>
       <button class="btn btn-primary">Show me my jobs →</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS — Celebration screen WITH mascot (emotional moment) -->
+<div style="position: relative;">
+  <div class="phone-label">FR 3.6 — Results / Celebration</div>
+  <div class="phone screen-results">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>●●●</span>
+    </div>
+
+    <!-- Confetti -->
+    <div class="confetti c1"></div>
+    <div class="confetti c2"></div>
+    <div class="confetti c3"></div>
+    <div class="confetti c4"></div>
+    <div class="confetti c5"></div>
+
+    <div class="decoration blob-1" style="background: radial-gradient(circle, #86EFAC 0%, transparent 70%);"></div>
+    <div class="decoration blob-2" style="background: radial-gradient(circle, var(--sky) 0%, transparent 70%); top: 500px; left: -40px;"></div>
+
+    <div class="results-body">
+      <div class="mascot-wrap" style="margin: 0 auto 1rem;">
+        <div class="mascot-halo" style="background: radial-gradient(circle, rgba(134, 239, 172, 0.5) 0%, transparent 70%);"></div>
+        <div class="mascot" style="width: 130px; height: 130px; background: linear-gradient(145deg, #D1FAE5 0%, #A7F3D0 100%); box-shadow: 0 20px 40px rgba(16, 185, 129, 0.25);">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 30 55 Q 30 25, 60 25 Q 90 25, 90 55 L 88 68 Q 85 58, 80 55 L 40 55 Q 35 58, 32 68 Z" fill="#3D2817"/>
+            <ellipse cx="60" cy="55" rx="22" ry="25" fill="#F5C9A0"/>
+            <!-- Happy eyes (arcs) -->
+            <path d="M 48 52 Q 52 49, 56 52" stroke="#2C1810" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M 64 52 Q 68 49, 72 52" stroke="#2C1810" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <circle cx="46" cy="60" r="3" fill="#FFB3A0" opacity="0.7"/>
+            <circle cx="74" cy="60" r="3" fill="#FFB3A0" opacity="0.7"/>
+            <!-- Big smile -->
+            <path d="M 50 64 Q 60 72, 70 64" stroke="#2C1810" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M 30 88 L 30 120 L 90 120 L 90 88 Q 85 80, 60 80 Q 35 80, 30 88 Z" fill="#15CAE8"/>
+            <path d="M 50 80 L 60 92 L 70 80 Q 65 78, 60 78 Q 55 78, 50 80 Z" fill="#0EA5C9"/>
+            <path d="M 50 85 Q 45 100, 50 110 Q 55 115, 60 113" stroke="#1F2937" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <circle cx="61" cy="114" r="3" fill="#374151"/>
+            <rect x="72" y="92" width="10" height="7" rx="1" fill="#fff" stroke="#0EA5C9" stroke-width="0.5"/>
+          </svg>
+        </div>
+        <div style="position: absolute; top: -5px; right: -8px; font-size: 1.8rem;">🎉</div>
+      </div>
+
+      <div class="big-number">12</div>
+      <h1 class="results-title">jobs match <span style="background: linear-gradient(120deg, var(--sky), var(--midnight)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">your profile</span></h1>
+      <p class="results-sub"><strong>3 are live</strong> — let's find your fit.</p>
+    </div>
+
+    <div class="splash-cta">
+      <button class="btn btn-primary">See my jobs →</button>
     </div>
   </div>
 </div>

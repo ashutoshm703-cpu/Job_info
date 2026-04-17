@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/student-onboarding-prototype.html",
+      "destination": "/student-onboarding-prototype.html"
+    },
+    {
+      "source": "/PRD_Student_Onboarding.html",
+      "destination": "/PRD_Student_Onboarding.html"
+    },
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

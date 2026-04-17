@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NPrep JOBS — Student Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Poppins', sans-serif; background: #f0f2f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #131B63; }
+
+/* Phone frame */
+.phone-frame { width: 390px; height: 844px; background: #fff; border-radius: 40px; overflow: hidden; position: relative; box-shadow: 0 25px 80px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); }
+
+/* Screens */
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform: translateX(30px); overflow-y: auto; }
+.screen.active { opacity: 1; pointer-events: all; transform: translateX(0); }
+.screen.exit-left { opacity: 0; transform: translateX(-30px); }
+
+/* Splash screen */
+.splash { background: linear-gradient(180deg, #ffffff 0%, #E5F0F8 100%); justify-content: center; align-items: center; text-align: center; padding: 2rem; }
+.splash-logo { width: 80px; height: 80px; background: linear-gradient(135deg, #131B63 0%, #15CAE8 100%); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; animation: logoFloat 3s ease-in-out infinite; }
+.splash-logo svg { width: 40px; height: 40px; fill: white; }
+@keyframes logoFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.splash h1 { font-size: 1.8rem; font-weight: 700; color: #131B63; margin-bottom: 0.25rem; }
+.splash h1 span { color: #15CAE8; font-weight: 800; }
+.splash .tagline { font-size: 0.95rem; color: #131B63; opacity: 0.7; margin-bottom: 2rem; line-height: 1.5; }
+.stats-row { display: flex; justify-content: center; gap: 1.5rem; margin-bottom: 1.5rem; }
+.stat-item { text-align: center; }
+.stat-icon { width: 48px; height: 48px; border-radius: 14px; background: #E5F0F8; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.4rem; }
+.stat-icon svg { width: 22px; height: 22px; fill: #15CAE8; }
+.stat-num { font-size: 1.1rem; font-weight: 700; color: #131B63; }
+.stat-label { font-size: 0.7rem; color: #131B63; opacity: 0.5; font-weight: 500; }
+.trust-badge { background: #E5F0F8; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; color: #131B63; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 2rem; }
+.trust-badge::before { content: '✓'; color: #15CAE8; font-weight: 800; }
+.trusted-text { font-size: 0.75rem; color: #131B63; opacity: 0.4; margin-bottom: 1rem; }
+.trusted-text span { font-weight: 700; }
+
+/* Primary button */
+.btn-primary { width: 100%; padding: 1rem; background: #131B63; color: white; border: none; border-radius: 14px; font-family: 'Poppins', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-primary:hover { background: #0d1347; transform: translateY(-1px); }
+.btn-primary:active { transform: scale(0.98); }
+
+/* Form screens */
+.form-screen { padding: 0; display: flex; flex-direction: column; }
+.form-header { padding: 1.5rem 1.5rem 0; flex-shrink: 0; }
+.form-header h2 { font-size: 1.2rem; font-weight: 700; color: #131B63; margin-bottom: 0.15rem; }
+.form-header p { font-size: 0.8rem; color: #131B63; opacity: 0.5; line-height: 1.4; }
+.form-header .close-btn { position: absolute; top: 1.5rem; right: 1.5rem; width: 28px; height: 28px; border: none; background: #E5F0F8; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: #131B63; }
+
+/* Progress bar */
+.progress-bar { display: flex; align-items: center; gap: 6px; padding: 1rem 1.5rem 0; }
+.progress-dot { width: 8px; height: 8px; border-radius: 50%; background: #E5F0F8; transition: all 0.3s; }
+.progress-dot.active { background: #131B63; }
+.progress-segment { flex: 1; height: 3px; border-radius: 2px; background: #E5F0F8; transition: all 0.4s; }
+.progress-segment.active { background: #131B63; }
+.progress-label { font-size: 0.7rem; font-weight: 600; color: #131B63; opacity: 0.4; margin-left: auto; }
+
+/* Form card */
+.form-card { background: white; border: 1px solid #E5F0F8; border-radius: 16px; padding: 1.25rem; margin: 1rem 1.5rem; }
+.form-card h3 { font-size: 0.95rem; font-weight: 700; color: #131B63; margin-bottom: 0.15rem; }
+.form-card .card-sub { font-size: 0.75rem; color: #131B63; opacity: 0.45; margin-bottom: 1rem; }
+
+/* Form fields */
+.field { margin-bottom: 1rem; animation: fieldIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.field:nth-child(2) { animation-delay: 0.05s; }
+.field:nth-child(3) { animation-delay: 0.1s; }
+.field:nth-child(4) { animation-delay: 0.15s; }
+.field:nth-child(5) { animation-delay: 0.2s; }
+.field:nth-child(6) { animation-delay: 0.25s; }
+.field:nth-child(7) { animation-delay: 0.3s; }
+@keyframes fieldIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.field label { display: block; font-size: 0.8rem; font-weight: 600; color: #131B63; margin-bottom: 0.35rem; }
+.field label .optional { font-weight: 400; color: #999; font-size: 0.7rem; }
+.field input, .field select { width: 100%; padding: 0.7rem 0.85rem; border: 1.5px solid #E5F0F8; border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 0.85rem; font-weight: 500; color: #131B63; background: white; outline: none; transition: border-color 0.2s; }
+.field input:focus, .field select:focus { border-color: #15CAE8; }
+.field input.error, .field select.error { border-color: #ef4444; }
+.field .error-msg { font-size: 0.7rem; color: #ef4444; margin-top: 0.25rem; display: none; }
+.field input.error + .error-msg, .field select.error + .error-msg { display: block; }
+
+/* Searchable dropdown */
+.search-dropdown { position: relative; }
+.search-dropdown input { cursor: pointer; }
+.search-dropdown .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1.5px solid #E5F0F8; border-radius: 10px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+.search-dropdown .dropdown-list.open { display: block; }
+.search-dropdown .dropdown-item { padding: 0.6rem 0.85rem; font-size: 0.8rem; cursor: pointer; transition: background 0.15s; }
+.search-dropdown .dropdown-item:hover { background: #E5F0F8; }
+.search-dropdown .dropdown-item.selected { background: #131B63; color: white; }
+
+/* Toggle */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; }
+.toggle-row .toggle-label { font-size: 0.8rem; font-weight: 600; color: #131B63; flex: 1; }
+.toggle-wrap { display: flex; align-items: center; gap: 8px; }
+.toggle { width: 44px; height: 24px; border-radius: 12px; background: #ccc; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
+.toggle.on { background: #15CAE8; }
+.toggle .thumb { width: 20px; height: 20px; border-radius: 50%; background: white; position: absolute; top: 2px; left: 2px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle.on .thumb { left: 22px; }
+.toggle-status { font-size: 0.75rem; font-weight: 500; color: #999; min-width: 24px; }
+
+/* Warning box */
+.warning-box { background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 10px; padding: 0.6rem 0.8rem; font-size: 0.75rem; color: #92400E; line-height: 1.4; margin-top: 0.5rem; display: none; }
+.warning-box.show { display: block; animation: fieldIn 0.3s ease both; }
+
+/* Bottom bar */
+.bottom-bar { padding: 1rem 1.5rem; margin-top: auto; flex-shrink: 0; display: flex; gap: 0.75rem; background: white; }
+.btn-back { flex: 0.6; padding: 0.85rem; background: #E5F0F8; color: #131B63; border: none; border-radius: 14px; font-family: 'Poppins', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-next { flex: 1; padding: 0.85rem; background: #131B63; color: white; border: none; border-radius: 14px; font-family: 'Poppins', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-next:hover { background: #0d1347; }
+.btn-next:active { transform: scale(0.98); }
+.btn-next:disabled { background: #ccc; cursor: not-allowed; }
+
+/* Skip button */
+.skip-btn { width: 100%; padding: 0.6rem; background: transparent; border: 1.5px solid #E5F0F8; border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 0.8rem; font-weight: 600; color: #131B63; opacity: 0.5; cursor: pointer; margin: 0 1.5rem; width: calc(100% - 3rem); transition: all 0.2s; }
+.skip-btn:hover { opacity: 0.8; border-color: #131B63; }
+
+/* Conditional fields */
+.conditional { display: none; animation: fieldIn 0.3s ease both; }
+.conditional.show { display: block; }
+
+/* Results screen */
+.results { padding: 1.5rem; }
+.results-header { text-align: center; margin-bottom: 1.5rem; }
+.results-count { font-size: 3rem; font-weight: 800; color: #15CAE8; line-height: 1; }
+.results-label { font-size: 1rem; font-weight: 600; color: #131B63; }
+.results-sub { font-size: 0.8rem; color: #131B63; opacity: 0.5; margin-top: 0.25rem; }
+.exam-card { background: white; border: 1.5px solid #E5F0F8; border-radius: 14px; padding: 1rem; margin-bottom: 0.75rem; transition: all 0.2s; cursor: pointer; }
+.exam-card:hover { border-color: #15CAE8; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(21,202,232,0.1); }
+.exam-card h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.25rem; }
+.exam-card .exam-meta { display: flex; gap: 1rem; font-size: 0.7rem; color: #131B63; opacity: 0.5; }
+.exam-card .exam-meta span { display: flex; align-items: center; gap: 4px; }
+.exam-tag { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; margin-top: 0.4rem; }
+.exam-tag.eligible { background: #D1FAE5; color: #065F46; }
+.exam-tag.check { background: #FEF3C7; color: #92400E; }
+
+/* Profile completion */
+.profile-nudge { background: #E5F0F8; border-radius: 12px; padding: 1rem; margin-top: 1rem; text-align: center; }
+.profile-nudge p { font-size: 0.8rem; font-weight: 600; color: #131B63; margin-bottom: 0.5rem; }
+.profile-bar { height: 6px; background: #ccc; border-radius: 3px; overflow: hidden; margin-bottom: 0.4rem; }
+.profile-bar .fill { height: 100%; background: #15CAE8; border-radius: 3px; transition: width 0.5s; }
+.profile-pct { font-size: 0.7rem; color: #131B63; opacity: 0.5; }
+.profile-nudge .btn-complete { margin-top: 0.5rem; padding: 0.5rem 1rem; background: transparent; border: 1.5px solid #131B63; border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 0.75rem; font-weight: 600; color: #131B63; cursor: pointer; }
+
+/* Scrollbar */
+.screen::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+
+  <!-- Screen 0: Splash -->
+  <div class="screen splash active" id="screen-splash">
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      <div class="splash-logo">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8" fill="none" stroke="white" stroke-width="2"/><line x1="16" y1="13" x2="8" y2="13" stroke="white" stroke-width="2"/><line x1="16" y1="17" x2="8" y2="17" stroke="white" stroke-width="2"/></svg>
+      </div>
+      <h1>NPrep <span>JOBS</span></h1>
+      <p class="tagline">Your nursing career, sorted.<br>Government nursing jobs across India — matched to you.</p>
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-num">80K+</div>
+          <div class="stat-label">Students</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="stat-num">50+</div>
+          <div class="stat-label">Exams</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-icon"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+          <div class="stat-num">100%</div>
+          <div class="stat-label">Verified</div>
+        </div>
+      </div>
+      <div class="trust-badge">All jobs are verified by NPrep for authenticity</div>
+    </div>
+    <div style="padding: 0 1.5rem 2rem; text-align:center;">
+      <p class="trusted-text">Trusted by <span>1,00,000+</span> Students</p>
+      <button class="btn-primary" onclick="goTo('screen-step1')">Enter Job Portal</button>
+    </div>
+  </div>
+
+  <!-- Screen 1: About You -->
+  <div class="screen form-screen" id="screen-step1">
+    <div class="form-header">
+      <button class="close-btn" onclick="goTo('screen-splash')">×</button>
+      <h2>Tell us about you to find eligible jobs!</h2>
+      <p>We'll use this to filter exams and opportunities specific to your profile.</p>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-segment active"></div>
+      <div class="progress-segment"></div>
+      <div class="progress-segment"></div>
+      <span class="progress-label">1/3</span>
+    </div>
+    <div class="form-card">
+      <h3>About you</h3>
+      <p class="card-sub">The basics — takes 20 seconds</p>
+      <div class="field">
+        <label>Date of birth</label>
+        <input type="date" id="dob" placeholder="DD/MM/YYYY">
+        <div class="error-msg">Please enter your date of birth</div>
+      </div>
+      <div class="field">
+        <label>Gender</label>
+        <select id="gender"><option value="">Gender</option><option>Male</option><option>Female</option></select>
+        <div class="error-msg">Please select your gender</div>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="category"><option value="">Category</option><option>Unreserved (UR)</option><option>OBC</option><option>SC</option><option>ST</option></select>
+        <div class="error-msg">Please select your category</div>
+      </div>
+      <div class="field">
+        <label>Your home state</label>
+        <div class="search-dropdown">
+          <input type="text" id="state" placeholder="Search your state..." autocomplete="off" onfocus="openStateDropdown()" oninput="filterStates()">
+          <div class="dropdown-list" id="state-dropdown"></div>
+        </div>
+        <div class="error-msg">Please select your home state</div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-next" onclick="goTo('screen-step2')">Next</button>
+    </div>
+  </div>
+
+  <!-- Screen 2: Qualification -->
+  <div class="screen form-screen" id="screen-step2">
+    <div class="form-header">
+      <button class="close-btn" onclick="goTo('screen-splash')">×</button>
+      <h2>Tell us about you to find eligible jobs!</h2>
+      <p>We'll use this to filter exams and opportunities specific to your profile.</p>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-dot active"></div>
+      <div class="progress-segment active"></div>
+      <div class="progress-segment"></div>
+      <span class="progress-label">2/3</span>
+    </div>
+    <div class="form-card">
+      <h3>Your nursing qualification</h3>
+      <p class="card-sub">So we can match you to the right exams</p>
+      <div class="field">
+        <label>Highest school exam passed</label>
+        <select id="schooling"><option value="">Select</option><option>10th Pass</option><option>12th Pass — Arts / Commerce / Other</option><option>12th Pass — Science (PCB)</option></select>
+        <div class="error-msg">Please select your schooling level</div>
+      </div>
+      <div class="field">
+        <label>Nursing qualification</label>
+        <select id="qualification" onchange="updateStatusOptions()"><option value="">Select</option><option>ANM</option><option>GNM</option><option>B.Sc. Nursing</option><option>Post-Basic B.Sc. Nursing</option><option>M.Sc. Nursing</option></select>
+        <div class="error-msg">Please select your qualification</div>
+      </div>
+      <div class="field">
+        <label>Where are you now?</label>
+        <select id="status"><option value="">Select qualification first</option></select>
+        <div class="error-msg">Please select your current status</div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-back" onclick="goTo('screen-step1')">Back</button>
+      <button class="btn-next" onclick="skipStep2()">Next</button>
+    </div>
+  </div>
+
+  <!-- Screen 2B: Registration & Experience (conditional) -->
+  <div class="screen form-screen" id="screen-step2b">
+    <div class="form-header">
+      <button class="close-btn" onclick="goTo('screen-splash')">×</button>
+      <h2>Tell us about you to find eligible jobs!</h2>
+      <p>We'll use this to filter exams and opportunities specific to your profile.</p>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-dot active"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-segment active"></div>
+      <div class="progress-segment"></div>
+      <span class="progress-label">2/3</span>
+    </div>
+    <div class="form-card">
+      <h3>Your nursing career so far</h3>
+      <p class="card-sub">Registration and work experience</p>
+      <div class="field">
+        <div class="toggle-row">
+          <span class="toggle-label">Is your college recognised by INC?</span>
+          <div class="toggle-wrap">
+            <div class="toggle on" id="inc-toggle" onclick="toggleSwitch(this)"><div class="thumb"></div></div>
+            <span class="toggle-status" id="inc-status">Yes</span>
+          </div>
+        </div>
+        <div class="warning-box" id="inc-warning">Most exams need INC recognition. Your results may be limited.</div>
+      </div>
+      <div class="field">
+        <label>Registered with which state council?</label>
+        <div class="search-dropdown">
+          <input type="text" id="council-state" placeholder="Search state council..." autocomplete="off" onfocus="openCouncilDropdown()" oninput="filterCouncils()">
+          <div class="dropdown-list" id="council-dropdown"></div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="toggle-row">
+          <span class="toggle-label">Any work experience after passing out?</span>
+          <div class="toggle-wrap">
+            <div class="toggle" id="exp-toggle" onclick="toggleSwitch(this); toggleExpFields()"><div class="thumb"></div></div>
+            <span class="toggle-status" id="exp-status">No</span>
+          </div>
+        </div>
+      </div>
+      <div class="conditional" id="exp-fields">
+        <div class="field">
+          <label>How many months?</label>
+          <input type="number" id="exp-months" placeholder="e.g. 24" min="0">
+        </div>
+        <div class="field">
+          <label>Hospital size (bed count)</label>
+          <select id="bed-count"><option value="">Select</option><option>Under 50</option><option>50 - 100</option><option>100 - 200</option><option>200 - 500</option><option>500+</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-back" onclick="goTo('screen-step2')">Back</button>
+      <button class="btn-next" onclick="goTo('screen-step3')">Next</button>
+    </div>
+  </div>
+
+  <!-- Screen 3: Anything else? (optional) -->
+  <div class="screen form-screen" id="screen-step3">
+    <div class="form-header">
+      <button class="close-btn" onclick="goTo('screen-splash')">×</button>
+      <h2>Tell us about you to find eligible jobs!</h2>
+      <p>We'll use this to filter exams and opportunities specific to your profile.</p>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-dot active"></div>
+      <div class="progress-dot active"></div>
+      <div class="progress-segment active"></div>
+      <span class="progress-label">3/3</span>
+    </div>
+    <button class="skip-btn" onclick="goTo('screen-results')">Skip — show me my jobs</button>
+    <div class="form-card">
+      <h3>Anything else?</h3>
+      <p class="card-sub">Most students skip this — you can always add it later</p>
+      <div class="field">
+        <label>Marital status <span class="optional">(optional)</span></label>
+        <select id="marital"><option value="">Select</option><option>Unmarried</option><option>Married</option><option>Divorced / Separated</option></select>
+      </div>
+      <div class="field">
+        <div class="toggle-row">
+          <span class="toggle-label">Person with disability (40%+)?</span>
+          <div class="toggle-wrap">
+            <div class="toggle" onclick="toggleSwitch(this)"><div class="thumb"></div></div>
+            <span class="toggle-status">No</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="toggle-row">
+          <span class="toggle-label">Ex-serviceman?</span>
+          <div class="toggle-wrap">
+            <div class="toggle" id="esm-toggle" onclick="toggleSwitch(this); toggleEsmFields()"><div class="thumb"></div></div>
+            <span class="toggle-status" id="esm-status">No</span>
+          </div>
+        </div>
+        <div class="conditional" id="esm-fields">
+          <div class="field" style="margin-top:0.5rem;">
+            <label>Months of service</label>
+            <input type="number" placeholder="e.g. 60" min="0">
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="toggle-row">
+          <span class="toggle-label">Central govt employee?</span>
+          <div class="toggle-wrap">
+            <div class="toggle" onclick="toggleSwitch(this)"><div class="thumb"></div></div>
+            <span class="toggle-status">No</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="toggle-row">
+          <span class="toggle-label">J&K domicile (1980-1989)?</span>
+          <div class="toggle-wrap">
+            <div class="toggle" onclick="toggleSwitch(this)"><div class="thumb"></div></div>
+            <span class="toggle-status">No</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-back" onclick="goBack3()">Back</button>
+      <button class="btn-next" onclick="goTo('screen-results')">Show me my eligible exams</button>
+    </div>
+  </div>
+
+  <!-- Screen 4: Results -->
+  <div class="screen form-screen" id="screen-results">
+    <div class="results">
+      <div class="results-header">
+        <div class="results-count">12</div>
+        <div class="results-label">exams match your profile</div>
+        <div class="results-sub">Based on your qualification and category</div>
+      </div>
+
+      <div class="exam-card">
+        <h4>AIIMS NORCET 11 (2026)</h4>
+        <div class="exam-meta">
+          <span>2,551 vacancies</span>
+          <span>Level 7 Pay</span>
+          <span>National</span>
+        </div>
+        <span class="exam-tag eligible">Likely eligible</span>
+      </div>
+
+      <div class="exam-card">
+        <h4>UPPSC Staff Nurse 2025</h4>
+        <div class="exam-meta">
+          <span>2,240 vacancies</span>
+          <span>Level 7 Pay</span>
+          <span>Uttar Pradesh</span>
+        </div>
+        <span class="exam-tag eligible">Likely eligible</span>
+      </div>
+
+      <div class="exam-card">
+        <h4>RRB Staff Nurse 2025</h4>
+        <div class="exam-meta">
+          <span>713 vacancies</span>
+          <span>Level 7 Pay</span>
+          <span>National</span>
+        </div>
+        <span class="exam-tag check">Check eligibility</span>
+      </div>
+
+      <div class="profile-nudge">
+        <p>Complete your profile for better matches</p>
+        <div class="profile-bar"><div class="fill" style="width: 65%"></div></div>
+        <div class="profile-pct">65% complete — add languages & experience for more results</div>
+        <button class="btn-complete">Complete profile</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// State data
+const STATES = [
+  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana",
+  "Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur",
+  "Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana",
+  "Tripura","Uttar Pradesh","Uttarakhand","West Bengal",
+  "Andaman & Nicobar Islands","Chandigarh","Dadra & Nagar Haveli and Daman & Diu","Delhi",
+  "Jammu & Kashmir","Ladakh","Lakshadweep","Puducherry"
+];
+
+const COUNCILS = ["Indian Nursing Council (INC)", ...STATES];
+
+const STATUS_MAP = {
+  "ANM": ["1st Year","2nd Year","Passed Out"],
+  "GNM": ["1st Year","2nd Year","3rd Year","Passed Out"],
+  "B.Sc. Nursing": ["1st Year","2nd Year","3rd Year","4th Year","Passed Out"],
+  "Post-Basic B.Sc. Nursing": ["1st Year","2nd Year","Passed Out"],
+  "M.Sc. Nursing": ["1st Year","2nd Year","Passed Out"],
+};
+
+let currentScreen = 'screen-splash';
+let isPassedOut = false;
+let selectedState = '';
+let selectedCouncil = '';
+
+// Navigation
+function goTo(screenId) {
+  const current = document.getElementById(currentScreen);
+  const next = document.getElementById(screenId);
+  current.classList.remove('active');
+  current.classList.add('exit-left');
+  setTimeout(() => current.classList.remove('exit-left'), 400);
+  next.classList.add('active');
+  currentScreen = screenId;
+  next.scrollTop = 0;
+}
+
+// Close all dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.search-dropdown')) {
+    document.querySelectorAll('.dropdown-list').forEach(d => d.classList.remove('open'));
+  }
+});
+
+// State dropdown
+function openStateDropdown() {
+  renderDropdown('state-dropdown', STATES, selectedState, (val) => {
+    selectedState = val;
+    document.getElementById('state').value = val;
+    document.getElementById('state-dropdown').classList.remove('open');
+    document.getElementById('state').classList.remove('error');
+  });
+  document.getElementById('state-dropdown').classList.add('open');
+}
+
+function filterStates() {
+  const q = document.getElementById('state').value.toLowerCase();
+  const filtered = STATES.filter(s => s.toLowerCase().includes(q));
+  renderDropdown('state-dropdown', filtered, selectedState, (val) => {
+    selectedState = val;
+    document.getElementById('state').value = val;
+    document.getElementById('state-dropdown').classList.remove('open');
+  });
+}
+
+// Council dropdown
+function openCouncilDropdown() {
+  renderDropdown('council-dropdown', COUNCILS, selectedCouncil, (val) => {
+    selectedCouncil = val;
+    document.getElementById('council-state').value = val;
+    document.getElementById('council-dropdown').classList.remove('open');
+  });
+  document.getElementById('council-dropdown').classList.add('open');
+}
+
+function filterCouncils() {
+  const q = document.getElementById('council-state').value.toLowerCase();
+  const filtered = COUNCILS.filter(s => s.toLowerCase().includes(q));
+  renderDropdown('council-dropdown', filtered, selectedCouncil, (val) => {
+    selectedCouncil = val;
+    document.getElementById('council-state').value = val;
+    document.getElementById('council-dropdown').classList.remove('open');
+  });
+}
+
+function renderDropdown(containerId, items, selected, onSelect) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = items.map(item =>
+    `<div class="dropdown-item ${item === selected ? 'selected' : ''}" onclick="event.stopPropagation(); arguments[0] = '${item.replace(/'/g, "\\'")}'"
+     onmousedown="event.preventDefault()"
+     data-value="${item}">${item}</div>`
+  ).join('');
+  container.querySelectorAll('.dropdown-item').forEach(el => {
+    el.onclick = (e) => { e.stopPropagation(); onSelect(el.dataset.value); };
+  });
+}
+
+// Status options update
+function updateStatusOptions() {
+  const qual = document.getElementById('qualification').value;
+  const statusSelect = document.getElementById('status');
+  statusSelect.innerHTML = '<option value="">Select</option>';
+  if (STATUS_MAP[qual]) {
+    STATUS_MAP[qual].forEach(s => {
+      statusSelect.innerHTML += `<option>${s}</option>`;
+    });
+  }
+}
+
+// Toggle switch
+function toggleSwitch(el) {
+  el.classList.toggle('on');
+  const status = el.nextElementSibling || el.parentElement.querySelector('.toggle-status');
+  if (status) status.textContent = el.classList.contains('on') ? 'Yes' : 'No';
+
+  // INC warning
+  if (el.id === 'inc-toggle') {
+    const warning = document.getElementById('inc-warning');
+    if (el.classList.contains('on')) warning.classList.remove('show');
+    else warning.classList.add('show');
+  }
+}
+
+// Conditional fields
+function toggleExpFields() {
+  const toggle = document.getElementById('exp-toggle');
+  const fields = document.getElementById('exp-fields');
+  fields.classList.toggle('show', toggle.classList.contains('on'));
+}
+
+function toggleEsmFields() {
+  const toggle = document.getElementById('esm-toggle');
+  const fields = document.getElementById('esm-fields');
+  fields.classList.toggle('show', toggle.classList.contains('on'));
+}
+
+// Validation
+function validateStep1() {
+  let valid = true;
+  ['dob','gender','category'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value) { el.classList.add('error'); valid = false; }
+    else el.classList.remove('error');
+  });
+  const stateInput = document.getElementById('state');
+  if (!selectedState) { stateInput.classList.add('error'); valid = false; }
+  else stateInput.classList.remove('error');
+
+  if (valid) goTo('screen-step2');
+}
+
+function skipStep2() {
+  isPassedOut = document.getElementById('status').value === 'Passed Out';
+  if (isPassedOut) goTo('screen-step2b');
+  else goTo('screen-step3');
+}
+
+function validateStep2() {
+  let valid = true;
+  ['schooling','qualification','status'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value) { el.classList.add('error'); valid = false; }
+    else el.classList.remove('error');
+  });
+  if (valid) {
+    isPassedOut = document.getElementById('status').value === 'Passed Out';
+    if (isPassedOut) goTo('screen-step2b');
+    else goTo('screen-step3');
+  }
+}
+
+function goBack3() {
+  if (isPassedOut) goTo('screen-step2b');
+  else goTo('screen-step2');
+}
+
+// Remove error on interaction
+document.querySelectorAll('.field input, .field select').forEach(el => {
+  el.addEventListener('input', () => el.classList.remove('error'));
+  el.addEventListener('change', () => el.classList.remove('error'));
+});
+</script>
+
+</body>
+</html>

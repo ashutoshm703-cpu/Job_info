@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NPrep JOBS — The Tracking Moment</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --midnight: #131B63;
+    --sky: #15CAE8;
+    --sky-soft: #F0F9FF;
+    --ice: #E5F0F8;
+    --peach: #FFF4ED;
+    --lavender: #F5F0FF;
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --border: #E5E7EB;
+    --border-soft: #F3F4F6;
+    --success: #10B981;
+    --success-light: #D1FAE5;
+  }
+  html, body {
+    font-family: 'Manrope', 'Poppins', sans-serif;
+    background: #F5F4F2;
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 3rem 2rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page-wrap {
+    width: 100%;
+    max-width: 1300px;
+  }
+
+  .page-heading {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+  .page-heading h1 {
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: var(--midnight);
+    letter-spacing: -0.02em;
+    margin-bottom: .5rem;
+  }
+  .page-heading p {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+  .page-heading .accent {
+    background: linear-gradient(120deg, var(--sky), var(--midnight));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .screens {
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #fff;
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 100px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.04), 0 0 0 8px #111;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .phone-label {
+    position: absolute;
+    top: -42px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: .72rem;
+    font-weight: 700;
+    color: var(--midnight);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    opacity: .65;
+  }
+
+  .status-bar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.75rem;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    flex-shrink: 0;
+  }
+
+  /* Feed background — same warm gradient as onboarding */
+  .screen-feed {
+    background: linear-gradient(180deg, #F8F4FF 0%, #FDFDFD 40%);
+  }
+
+  /* Top greeting strip */
+  .greeting {
+    padding: 1rem 1.5rem .5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .greet-left h2 {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+  .greet-left p {
+    font-size: .78rem;
+    color: var(--text-secondary);
+    margin-top: .15rem;
+  }
+  .greet-right {
+    display: flex;
+    gap: .5rem;
+  }
+  .greet-pill {
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    padding: .5rem .85rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 600;
+    color: var(--midnight);
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+  }
+  .greet-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.8);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+  }
+
+  /* Search */
+  .search {
+    margin: 1rem 1.5rem .5rem;
+    padding: .85rem 1.15rem;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    font-size: .85rem;
+    color: var(--text-muted);
+  }
+
+  /* Pills */
+  .pills {
+    padding: .5rem 1.5rem 1rem;
+    display: flex;
+    gap: .5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .pills::-webkit-scrollbar { display: none; }
+  .pill {
+    flex-shrink: 0;
+    padding: .4rem .85rem;
+    border-radius: 20px;
+    font-size: .72rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1.5px solid var(--border);
+  }
+  .pill.active {
+    background: var(--midnight);
+    color: #fff;
+    border-color: var(--midnight);
+  }
+  .pill .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #EF4444;
+    margin-right: .35rem;
+    vertical-align: 1px;
+  }
+
+  /* Scrollable feed body */
+  .feed-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 1.25rem 1.25rem;
+  }
+  .feed-body::-webkit-scrollbar { width: 0; }
+
+  /* Section header */
+  .section-title {
+    font-size: .75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    padding: .5rem .25rem .75rem;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+  }
+  .section-title .sparkle {
+    color: var(--sky);
+    font-size: .9rem;
+  }
+
+  /* Job card */
+  .job-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.25rem;
+    margin-bottom: .75rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* The hero card — the one being focused */
+  .job-card.hero {
+    background: linear-gradient(145deg, #FFFFFF 0%, #F8FAFF 100%);
+    box-shadow: 0 12px 40px rgba(19, 27, 99, 0.08);
+    border-color: rgba(21, 202, 232, 0.3);
+    position: relative;
+    animation: focusedIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: .2s;
+  }
+  @keyframes focusedIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* Faded surrounding cards */
+  .job-card.faded {
+    opacity: 0.38;
+    transform: scale(0.98);
+    filter: blur(0.3px);
+  }
+
+  /* Top row: icon + title */
+  .card-top {
+    display: flex;
+    gap: .85rem;
+    align-items: flex-start;
+  }
+  .card-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #3B82F6, #1D4ED8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  }
+  .card-title-block {
+    flex: 1;
+    min-width: 0;
+  }
+  .card-title-block h3 {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+  }
+  .card-title-block p {
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-top: .2rem;
+  }
+  .chev {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-top: .25rem;
+    flex-shrink: 0;
+  }
+
+  /* Badges */
+  .badges {
+    display: flex;
+    gap: .4rem;
+    margin-top: .75rem;
+    flex-wrap: wrap;
+  }
+  .badge {
+    padding: .25rem .6rem;
+    border-radius: 8px;
+    font-size: .68rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+  }
+  .badge-eligible {
+    background: var(--success-light);
+    color: var(--success);
+  }
+  .badge-time {
+    background: #F3F4F6;
+    color: var(--text-secondary);
+  }
+
+  /* Stats row */
+  .card-stats {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: .85rem;
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .card-stats .stat {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+  }
+  .card-stats .stat .icon {
+    color: var(--text-muted);
+  }
+
+  /* Tracking count row */
+  .tracking-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-soft);
+  }
+  .avatar-stack {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+  }
+  .avatars {
+    display: flex;
+    margin-left: 0;
+  }
+  .avatars .av {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .6rem;
+    font-weight: 800;
+    color: #fff;
+    margin-left: -8px;
+  }
+  .avatars .av:first-child { margin-left: 0; }
+  .avatars .av.a1 { background: #7C3AED; }
+  .avatars .av.a2 { background: #2563EB; }
+  .avatars .av.a3 { background: #059669; }
+  .tracking-text {
+    font-size: .75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .tracking-text b {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  /* Track Now button */
+  .track-btn {
+    background: var(--midnight);
+    color: #fff;
+    border: none;
+    padding: .7rem 1.15rem;
+    border-radius: 14px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: .78rem;
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(19, 27, 99, 0.28);
+    transition: all .2s;
+    position: relative;
+  }
+  .track-btn:hover {
+    background: #0D1347;
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(19, 27, 99, 0.35);
+  }
+
+  /* The helper text — the copy we're spotlighting */
+  .helper-text {
+    margin-top: .85rem;
+    padding: .75rem 1rem;
+    background: linear-gradient(120deg, rgba(21, 202, 232, 0.05), rgba(19, 27, 99, 0.03));
+    border-radius: 12px;
+    border-left: 3px solid var(--sky);
+    font-size: .82rem;
+    line-height: 1.45;
+    color: var(--text-primary);
+    animation: highlightPulse 2.5s ease-in-out infinite;
+  }
+  .helper-text .accent {
+    background: linear-gradient(120deg, var(--sky), var(--midnight));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+  }
+  @keyframes highlightPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(21, 202, 232, 0); }
+    50% { box-shadow: 0 0 0 6px rgba(21, 202, 232, 0.12); }
+  }
+
+  /* First-time nudge variant */
+  .nudge {
+    margin-top: .85rem;
+    padding: .75rem .95rem;
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border-radius: 12px;
+    font-size: .8rem;
+    line-height: 1.4;
+    color: #92400E;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .nudge .icon { font-size: 1rem; flex-shrink: 0; }
+
+  /* Annotation labels for the two versions */
+  .annotation {
+    position: absolute;
+    background: var(--midnight);
+    color: #fff;
+    padding: .4rem .75rem;
+    border-radius: 8px;
+    font-size: .68rem;
+    font-weight: 700;
+    white-space: nowrap;
+    letter-spacing: .02em;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(19, 27, 99, 0.3);
+  }
+  .annotation::before {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+  }
+  .annotation.left {
+    top: 330px;
+    right: -12px;
+    transform: translateX(100%);
+  }
+  .annotation.left::before {
+    left: -12px;
+    top: 50%;
+    margin-top: -6px;
+    border-right-color: var(--midnight);
+  }
+
+  /* Design note cards */
+  .notes-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .note-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.5rem 1.75rem;
+    flex: 1;
+    min-width: 280px;
+    max-width: 340px;
+  }
+  .note-card h3 {
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--midnight);
+    margin-bottom: .6rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .note-card p, .note-card li {
+    font-size: .82rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .note-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .note-card ul li {
+    padding: .35rem 0;
+    padding-left: 1.25rem;
+    position: relative;
+  }
+  .note-card ul li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--sky);
+    font-weight: 800;
+  }
+  .note-card .quote {
+    background: linear-gradient(120deg, rgba(21, 202, 232, 0.08), rgba(19, 27, 99, 0.05));
+    border-left: 3px solid var(--sky);
+    padding: .75rem 1rem;
+    border-radius: 8px;
+    font-style: italic;
+    font-size: .85rem;
+    color: var(--text-primary);
+    margin-top: .75rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+<div class="page-heading">
+  <h1>The Tracking <span class="accent">Moment</span></h1>
+  <p>The copy that lives below the Track Now button, at the decision point. Written in the voice of Headspace / Headway / Cred — warm, specific, emotionally honest.</p>
+</div>
+
+<div class="screens">
+
+  <!-- SCREEN 1: First-time user seeing the nudge -->
+  <div style="position: relative;">
+    <div class="phone-label">First-time user — nudge version</div>
+    <div class="phone screen-feed">
+      <div class="status-bar">
+        <span>9:41</span>
+        <span>●●●</span>
+      </div>
+
+      <div class="greeting">
+        <div class="greet-left">
+          <h2>Hi, Priya 👋</h2>
+          <p>12 jobs match your profile</p>
+        </div>
+        <div class="greet-right">
+          <span class="greet-pill">● Eligibility</span>
+          <span class="greet-icon">📅</span>
+        </div>
+      </div>
+
+      <div class="search">
+        <span>🔍</span>
+        <span>Search by exam name</span>
+      </div>
+
+      <div class="pills">
+        <span class="pill active">All</span>
+        <span class="pill"><span class="dot"></span>Live (2)</span>
+        <span class="pill">Closing soon</span>
+        <span class="pill">New</span>
+      </div>
+
+      <div class="feed-body">
+        <div class="section-title"><span class="sparkle">✨</span> Recommended for you</div>
+
+        <!-- THE HERO CARD -->
+        <div class="job-card hero">
+          <div class="card-top">
+            <div class="card-icon">🏥</div>
+            <div class="card-title-block">
+              <h3>SGPGI Nursing Officer</h3>
+              <p>NHM Mission · National</p>
+            </div>
+            <span class="chev">›</span>
+          </div>
+
+          <div class="badges">
+            <span class="badge badge-eligible">✓ Eligible</span>
+            <span class="badge badge-time">⏱ 14d left</span>
+          </div>
+
+          <div class="card-stats">
+            <div class="stat"><span class="icon">₹</span><span>10.5L – 12.9L</span></div>
+            <div class="stat"><span class="icon">👥</span><span>8,234 posts</span></div>
+          </div>
+
+          <div class="tracking-row">
+            <div class="avatar-stack">
+              <div class="avatars">
+                <div class="av a1">P</div>
+                <div class="av a2">R</div>
+                <div class="av a3">S</div>
+              </div>
+              <div class="tracking-text"><b>8.3k</b> tracking this</div>
+            </div>
+            <button class="track-btn">
+              <span>🔖</span>
+              <span>Track Now</span>
+            </button>
+          </div>
+
+          <div class="nudge">
+            <span class="icon">💡</span>
+            <span><b>Prep is the hard part.</b> The dates? That's on us.</span>
+          </div>
+        </div>
+
+        <!-- Faded second card to show context -->
+        <div class="job-card faded">
+          <div class="card-top">
+            <div class="card-icon" style="background: linear-gradient(145deg, #8B5CF6, #6D28D9);">📋</div>
+            <div class="card-title-block">
+              <h3>AIIMS NORCET 11</h3>
+              <p>AIIMS · National</p>
+            </div>
+          </div>
+          <div class="badges">
+            <span class="badge badge-eligible">✓ Eligible</span>
+            <span class="badge badge-time">⏱ 22d left</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="annotation left" style="top: 540px;">Nudge appears once, first-time only</div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: Helper text below Track Now button -->
+  <div style="position: relative;">
+    <div class="phone-label">Returning user — helper text</div>
+    <div class="phone screen-feed" style="background: linear-gradient(180deg, #FFF4ED 0%, #FDFDFD 40%);">
+      <div class="status-bar">
+        <span>9:41</span>
+        <span>●●●</span>
+      </div>
+
+      <div class="greeting">
+        <div class="greet-left">
+          <h2>Hi, Priya 👋</h2>
+          <p>12 jobs match your profile</p>
+        </div>
+        <div class="greet-right">
+          <span class="greet-pill">● Eligibility</span>
+          <span class="greet-icon">📅</span>
+        </div>
+      </div>
+
+      <div class="search">
+        <span>🔍</span>
+        <span>Search by exam name</span>
+      </div>
+
+      <div class="pills">
+        <span class="pill active">All</span>
+        <span class="pill"><span class="dot"></span>Live (2)</span>
+        <span class="pill">Closing soon</span>
+        <span class="pill">New</span>
+      </div>
+
+      <div class="feed-body">
+        <div class="section-title"><span class="sparkle">✨</span> Recommended for you</div>
+
+        <!-- THE HERO CARD -->
+        <div class="job-card hero">
+          <div class="card-top">
+            <div class="card-icon" style="background: linear-gradient(145deg, #F59E0B, #D97706);">🏥</div>
+            <div class="card-title-block">
+              <h3>AIIMS Rajasthan Nursing Officer</h3>
+              <p>Jodhpur, Rajasthan</p>
+            </div>
+            <span class="chev">›</span>
+          </div>
+
+          <div class="badges">
+            <span class="badge badge-eligible">✓ Eligible</span>
+            <span class="badge badge-time">⏱ 5d — closing soon</span>
+          </div>
+
+          <div class="card-stats">
+            <div class="stat"><span class="icon">₹</span><span>44.9k – 1.42L</span></div>
+            <div class="stat"><span class="icon">👥</span><span>3,500 posts</span></div>
+          </div>
+
+          <div class="tracking-row">
+            <div class="avatar-stack">
+              <div class="avatars">
+                <div class="av a1">A</div>
+                <div class="av a2">D</div>
+                <div class="av a3">M</div>
+              </div>
+              <div class="tracking-text"><b>2.1k</b> tracking this</div>
+            </div>
+            <button class="track-btn">
+              <span>🔖</span>
+              <span>Track Now</span>
+            </button>
+          </div>
+
+          <div class="helper-text">
+            <span class="accent">Prep is the hard part.</span> The dates? That's on us.
+          </div>
+        </div>
+
+        <div class="job-card faded">
+          <div class="card-top">
+            <div class="card-icon" style="background: linear-gradient(145deg, #10B981, #047857);">🩺</div>
+            <div class="card-title-block">
+              <h3>ESIC Nursing Officer</h3>
+              <p>Central Govt · National</p>
+            </div>
+          </div>
+          <div class="badges">
+            <span class="badge badge-eligible">✓ Eligible</span>
+            <span class="badge badge-time">⏱ 18d left</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="annotation left" style="top: 540px;">Helper text always visible below Track Now</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Design notes -->
+<div class="notes-row">
+  <div class="note-card">
+    <h3>🎯 The copy</h3>
+    <div class="quote">"Prep is the hard part. The dates? That's on us."</div>
+    <p style="margin-top: .75rem;">Two sentences. First acknowledges their effort. Second makes a promise. Separated by a question mark that creates conversational rhythm — reads like a friend, not a product.</p>
+  </div>
+
+  <div class="note-card">
+    <h3>🧘 Why Headspace / Headway loved this frame</h3>
+    <ul>
+      <li><b>Acknowledges effort</b> before making the promise — the emotional handshake lands first</li>
+      <li><b>Question mark rhythm</b> breaks the monotone of feature copy</li>
+      <li><b>"That's on us"</b> transfers mental load — no guilt, no sell</li>
+      <li><b>Specific words</b> (prep, dates) not vague (updates, reminders)</li>
+    </ul>
+  </div>
+
+  <div class="note-card">
+    <h3>📍 Two placements, same copy</h3>
+    <ul>
+      <li><b>First-time nudge</b> — shown once on the topmost card to teach what Track Now does. Warm yellow pill.</li>
+      <li><b>Helper text</b> — always visible below every Track Now button. Subtle accent card with the copy highlighted.</li>
+      <li><b>After tracking</b> — copy changes to "You're set. We'll tap you on the shoulder when it's time."</li>
+    </ul>
+  </div>
+</div>
+
+</div>
+
+</body>
+</html>
